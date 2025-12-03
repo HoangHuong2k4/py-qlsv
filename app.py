@@ -197,14 +197,6 @@ def dashboard():
                          credit_summary=credit_summary)
 
 
-@app.route('/study-plan')
-def study_plan():
-    if 'student_id' not in session:
-        return redirect(url_for('index'))
-    return render_template('study_plan.html',
-                         student_id=session.get('student_id'),
-                         student_name=session.get('student_name'))
-
 @app.route('/recommendations')
 def recommendations():
     if 'student_id' not in session:
