@@ -1,0 +1,69 @@
+╔═══════════════════════════════════════════════════════════╗
+║  ⚡ QUICK START - BẮT ĐẦU NHANH                          ║
+╚═══════════════════════════════════════════════════════════╝
+
+🌐 URL: http://localhost:5001 (Flask đang chạy)
+💾 DB:  QuanLyHocTap_Full.sql (983KB - Đã có sẵn)
+
+═══════════════════════════════════════════════════════════
+🔐 TÀI KHOẢN TEST
+═══════════════════════════════════════════════════════════
+
+SINH VIÊN:  B2200001 / B2200001  (Có gợi ý 4-5 môn)
+ADMIN:      admin / admin123     (Quản lý đầy đủ)
+
+═══════════════════════════════════════════════════════════
+🎯 TEST 2 CHẾ ĐỘ
+═══════════════════════════════════════════════════════════
+
+1️⃣  SINH VIÊN (Gợi ý AI):
+   • Mở: http://localhost:5001
+   • Tab "👤 Sinh viên"
+   • Login: B2200001 / B2200001
+   • Xem Dashboard → GỢI Ý 4-5 môn ✅
+
+2️⃣  ADMIN (Quản lý đầy đủ):
+   • Mở: http://localhost:5001
+   • Tab "🔐 Admin"
+   • Login: admin / admin123
+   • Test các chức năng:
+     ✅ Xem thống kê
+     ✅ Quản lý SV (xem/thêm/xóa/chi tiết)
+     ✅ Quản lý môn (xem/thêm/xóa/chi tiết)
+     ✅ Xem tiến trình THEO HỌC KỲ
+     ✅ Xem ai học môn nào THEO HỌC KỲ
+
+═══════════════════════════════════════════════════════════
+📖 TÀI LIỆU (CHỈ 2 FILES)
+═══════════════════════════════════════════════════════════
+
+README.md   → Tổng quan hệ thống (ĐỌC ĐẦU TIÊN)
+INSTALL.md  → Hướng dẫn cài đặt (nếu setup lại)
+
+═══════════════════════════════════════════════════════════
+⚡ COMMANDS
+═══════════════════════════════════════════════════════════
+
+# Restart Flask
+pkill -f "python3 app.py"
+python3 app.py
+
+# Import DB (nếu cần)
+mysql -u root < QuanLyHocTap_Full.sql
+
+# Test
+open http://localhost:5001
+
+═══════════════════════════════════════════════════════════
+✅ ĐÃ HOÀN TẤT
+═══════════════════════════════════════════════════════════
+
+[✓] Database: 983KB (7 bảng, 11 cột mới)
+[✓] Admin: Full CRUD + Chi tiết theo học kỳ
+[✓] Student: Gợi ý AI hoạt động
+[✓] Templates: 14 files
+[✓] Docs: Gọn gàng (2 files chính)
+
+🎉 SẴN SÀNG TEST! 
+http://localhost:5001
+

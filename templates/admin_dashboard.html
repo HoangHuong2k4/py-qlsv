@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="fas fa-user-shield"></i> Admin Dashboard</span>
+            <div class="d-flex">
+                <span class="text-white me-3">{{ admin_name }}</span>
+                <a href="/admin/logout" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <h2 class="mb-4"><i class="fas fa-tachometer-alt"></i> Tổng quan hệ thống</h2>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Thống kê -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-users"></i> Sinh viên</h5>
+                        <h2>{{ stats.students }}</h2>
+                        <small>Tổng số sinh viên</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-book"></i> Môn học</h5>
+                        <h2>{{ stats.courses }}</h2>
+                        <small>Tổng số môn học</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-info">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-chart-line"></i> Tiến trình</h5>
+                        <h2>{{ stats.progress }}</h2>
+                        <small>Records tiến trình</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Menu chính -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-4x text-primary mb-3"></i>
+                        <h5>Quản lý Sinh viên</h5>
+                        <p class="text-muted">Xem, thêm, sửa, xóa sinh viên</p>
+                        <a href="/admin/students" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Vào quản lý
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-book fa-4x text-success mb-3"></i>
+                        <h5>Quản lý Môn học</h5>
+                        <p class="text-muted">Xem danh sách môn học</p>
+                        <a href="/admin/courses" class="btn btn-success">
+                            <i class="fas fa-arrow-right"></i> Vào quản lý
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

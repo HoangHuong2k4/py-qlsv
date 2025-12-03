@@ -1,0 +1,1029 @@
+Chức năng với sinh viên và admin
+Với sinh viên: 
++Sinh viên mới (chưa tiến trình)
+-Đăng nhập, đăng xuất
+-Gợi ý từ hk1 năm 1
+-Dowload gợi ý
+-Biểu đồ số tín chỉ trong học kì
++Sinh viên đã học trên 1 học kì (có tién trình):
+-Đăng nhập, đăng xuất
+-Hiển thị lịch sử các học phần đã học
+-Gợi ý các học phần tiếp theo
+-Biểu đồ số tín chỉ trong học kì
+-Dowload gợi ý
+
+Với admin:
+-Đăng nhập, đăng xuất
+-Quản lý sinh viên, quản lý môn học
+
+# 📋 DANH SÁCH CHI TIẾT CHỨC NĂNG NGHIỆP VỤ - HỆ THỐNG QUẢN LÝ HỌC TẬP
+
+*Cập nhật: 30 tháng 11, 2025*
+
+---
+
+## 🎯 Tóm tắt Tổng Quan
+
+Hệ thống là **nền tảng quản lý học tập và gợi ý môn học thông minh** dựa trên:
+- **K-Means Clustering** để phân tích mô hình học tập sinh viên (5 nhóm)
+- **Machine Learning** để gợi ý môn học tối ưu cho từng sinh viên
+- **Flask Web** để cung cấp giao diện người dùng (Student + Admin)
+- **MySQL Database** để lưu trữ dữ liệu sinh viên, môn học, tiến trình học
+- **ReportLab/WeasyPrint** để tạo file PDF kế hoạch học tập
+- **Chart.js** để visualize tín chỉ theo kỳ học
+
+---
+
+## 🔐 CHỨC NĂNG QUẢN LÝ TÀI KHOẢN
+
+### 1. Đăng Nhập (Login)
+- **Route:** `POST /login`
+- **Chức năng:**
+  - Xác thực mã sinh viên + mật khẩu
+  - Hỗ trợ mật khẩu plaintext (legacy) và hashed (pbkdf2:sha256)
+  - Tự động convert plaintext → hash khi đăng nhập lần đầu
+  - Lưu session: `student_id`, `student_name`
+  - Hiển thị lỗi nếu sai tài khoản
+- **Bảng dữ liệu:** `SinhVien` (StudentID, Password, HoTen)
+- **UI Template:** `login.html`
+
+### 2. Đăng Xuất (Logout)
+- **Route:** `GET /logout`
+- **Chức năng:**
+  - Xoá session
+  - Chuyển hướng về trang đăng nhập
+- **UI Template:** Redirect to `index.html`
+
+### 3. Trang Chủ / Index
+- **Route:** `GET /` (2 route cùng tên - cần sửa)
+- **Chức năng:**
+  - Nếu đã đăng nhập → chuyển sang Dashboard
+  - Nếu chưa đăng nhập → hiển thị trang đăng nhập
+- **UI Template:** `index.html` / `login.html`
+
+---
+
+## 📊 CHỨC NĂNG DASHBOARD CHÍNH
+
+### 4. Dashboard Sinh Viên
+- **Route:** `GET /dashboard`
+- **Yêu cầu:** Phải đăng nhập
+- **Chức năng chính:**
+  
+  #### 4.1 Hiển thị thông tin sinh viên
+  - Mã số, họ tên
+  - Tổng tín chỉ đã học / tín chỉ yêu cầu (156 TC)
+  - Tiến độ theo % (progress bar)
+  
+  #### 4.2 Hiển thị lịch sử học tập
+  - Danh sách tất cả môn đã học
+  - Cột: Mã môn, tên môn, tín chỉ, năm, kỳ, điểm, trạng thái
+  - Sắp xếp theo Year, Semester
+  - Tính tổng TC: các môn có Status = "Đã học" hoặc "Đã qua"
+  
+  #### 4.3 Gợi ý môn học tiếp theo
+  - Gọi hàm `recommend_next_courses(student_id)`
+  - Hiển thị danh sách gợi ý (nếu có)
+  - Mỗi gợi ý gồm: Mã môn, tên, tín chỉ, mô tả, mục đích học
+  - Phân loại gợi ý theo nhóm (HK1 năm 5 - Luận văn, Các môn bổ sung)
+  
+  #### 4.4 Nút điều hướng chính
+  - "📚 5 Kế Hoạch Học Tập" → `/learning-plans`
+  
+- **Bảng dữ liệu được sử dụng:**
+  - `SinhVien` (thông tin cá nhân)
+  - `TienTrinh` (lịch sử học)
+  - `MonHoc` (thông tin môn học)
+  
+- **UI Template:** `student_dashboard.html`
+
+---
+
+## 🎓 CHỨC NĂNG GỢI Ý MÔN HỌC
+
+### 5. Gợi ý Môn Học - Hệ Thống Chính
+- **Route:** `GET /dashboard` (gọi từ đây)
+- **Chức năng:**
+  - Phân tích dữ liệu lịch sử học của sinh viên
+  - **Nếu sinh viên có dữ liệu (`TienTrinh`):**
+    - Dùng K-Means model để xác định cluster
+    - Lấy các sinh viên cùng cluster
+    - Phân tích các môn họ học tiếp theo
+    - Gợi ý dựa trên mô hình học tập tương tự
+  
+  - **Nếu sinh viên mới (không có `TienTrinh`):**
+    - Fallback: Gợi ý dựa trên sinh viên tốt nghiệp
+    - Lấy HK1 năm 1 (môn cơ bản)
+    - Sử dụng mô hình từ sinh viên OnTime = True, Graduated = True
+  
+- **Module:** `recommender/recommend.py` → hàm `recommend_next_courses()`
+- **Fallback logic:** `recommender/ontime_graduate_recommender.py` → hàm `recommend_for_new_student()`
+- **Output:**
+  - Danh sách môn gợi ý với metadata:
+    - CourseCode, CourseName, Credits, Semester, Year
+    - recommendation_group (nhóm gợi ý)
+    - recommendation_type (loại gợi ý)
+# 🎯 CHI TIẾT: GỢIY MÔN HỌC CHO SINH VIÊN MỚI vs SINH VIÊN CÓ TIẾN TRÌNH
+
+### A. SINH VIÊN MỚI (New Student - Không có TienTrinh)
+
+#### Định nghĩa:
+- Sinh viên đăng nhập lần đầu
+- Hoặc sinh viên chưa bao giờ học môn nào (TienTrinh trống)
+- Ví dụ: B2200012 (mới được thêm vào hệ thống), hoặc sinh viên chỉ vừa đăng ký
+
+#### Quy trình Gợi ý (Fallback Strategy):
+
+**Step 1: Kiểm tra dữ liệu TienTrinh**
+```python
+# Trong app.py / recommend_next_courses()
+student_progress = db.query(TienTrinh).filter(TienTrinh.StudentID == student_id).all()
+if not student_progress or len(student_progress) == 0:
+    # → Sinh viên MỚI, gọi fallback
+    return recommend_for_new_student(student_id)
+```
+
+**Step 2: Gọi `ontime_graduate_recommender.recommend_for_new_student()`**
+```python
+def recommend_for_new_student(student_id):
+    """
+    Gợi ý cho sinh viên mới dựa trên sinh viên tốt nghiệp đúng hạn
+    """
+    # 1. Lọc sinh viên "mẫu" (OnTime + Graduated)
+    good_students = db.query(TienTrinh).filter(
+        TienTrinh.OnTime == True,
+        TienTrinh.Graduated == True
+    ).all()
+    
+    # 2. Lấy các sinh viên này học môn gì ở HK1 năm 1
+    hk1_year1_courses = db.query(TienTrinh).filter(
+        TienTrinh.StudentID.in_([s.StudentID for s in good_students]),
+        TienTrinh.Year == 1,
+        TienTrinh.Semester == 1
+    ).all()
+    
+    # 3. Đếm tần suất từng môn
+    course_frequency = Counter([record.CourseCode for record in hk1_year1_courses])
+    
+    # 4. Lấy top 8 môn phổ biến nhất
+    top_courses = course_frequency.most_common(8)
+    
+    # 5. Return danh sách gợi ý
+    return [
+        {
+            'CourseCode': course_code,
+            'CourseName': get_course_name(course_code),
+            'Credits': get_course_credits(course_code),
+            'Year': 1,
+            'Semester': 1,
+            'recommendation_group': 'HK1 Năm 1 (Môn Cơ Bản)',
+            'recommendation_type': 'new_student_default',
+            'reason': 'Gợi ý cho sinh viên mới dựa trên mô hình từ sinh viên tốt nghiệp'
+        }
+        for course_code in [c[0] for c in top_courses]
+    ]
+```
+
+#### Kết quả gợi ý cho sinh viên mới:
+- **Được gợi ý:** Top 8 môn từ HK1 năm 1 (môn cơ bản)
+- **Ví dụ môn gợi ý:** 
+  - CT100: Kỹ năng học đại học (khối ngành CNTT) - 2 TC
+  - TN010: Xác suất thống kê - 3 TC
+  - QP010-QP013: Giáo dục quốc phòng (4 môn × 2 TC)
+  - TC100_2: Giáo dục thể chất - 1 TC
+  - Và 1-2 môn khác phổ biến
+
+#### Logic phía sau:
+```
+Tại sao chọn HK1 năm 1?
+├─ Sinh viên mới chắc chắn phải học HK1 năm 1 (môn bắt buộc)
+├─ Để xác định top 8 môn, ta xem sinh viên "tốt" học gì
+├─ Sinh viên "tốt" = OnTime + Graduated (tốt nghiệp đúng hạn)
+└─ Giả thiết: Nếu họ học những môn này ở HK1, nó phù hợp cho sinh viên mới
+
+Tại sao không dùng K-Means?
+├─ Sinh viên mới không có TienTrinh (không có features)
+├─ Không thể assign vào cluster nếu không có dữ liệu
+└─ Fallback: Dùng "best practice" từ sinh viên thành công
+```
+
+---
+
+### B. SINH VIÊN CÓ TIẾN TRÌNH (Existing Student - Có TienTrinh)
+
+#### Định nghĩa:
+- Sinh viên đã học ít nhất 1 kỳ học
+- Có các record trong bảng `TienTrinh`
+- Ví dụ: B2100001 (học từ kỳ 1 năm 1), B2100045 (học từ nhiều kỳ)
+
+#### Quy trình Gợi ý (K-Means Clustering Strategy):
+
+**Step 1: Kiểm tra dữ liệu TienTrinh**
+```python
+# Trong app.py / recommend_next_courses()
+student_progress = db.query(TienTrinh).filter(TienTrinh.StudentID == student_id).all()
+if student_progress and len(student_progress) > 0:
+    # → Sinh viên CÓ TIẾN TRÌNH, dùng clustering
+    return clustering_recommender_v2.get_recommendations(student_id)
+```
+
+**Step 2: Load K-Means Model & Scaler**
+```python
+# Trong clustering_recommender_v2.py
+import pickle
+
+# Load model
+with open('models/kmeans_model.pkl', 'rb') as f:
+    kmeans_model = pickle.load(f)
+
+# Load scaler (để normalize features)
+with open('models/scaler.pkl', 'rb') as f:
+    scaler = pickle.load(f)
+```
+
+**Step 3: Tạo Feature Vector cho sinh viên**
+```python
+def get_student_features(student_id):
+    """
+    Tạo vector 53 chiều: số tín chỉ đạt được cho mỗi môn
+    """
+    # 53 môn duy nhất trong hệ thống
+    all_courses = ['CT100', 'CT101', 'CT112', ..., 'XH025']  # 53 courses
+    
+    # Lấy TienTrinh của sinh viên
+    progress = db.query(TienTrinh).filter(TienTrinh.StudentID == student_id).all()
+    
+    # Tạo dictionary: {CourseCode: Credits}
+    # Chỉ count các môn PASSED (Score >= 4.0 hoặc Status = 'Đã qua')
+    passed_courses = {
+        record.CourseCode: record.Credits 
+        for record in progress 
+        if record.Score >= 4.0 or record.Status == 'Đã qua'
+    }
+    
+    # Build feature vector (53 chiều)
+    feature_vector = []
+    for course in all_courses:
+        if course in passed_courses:
+            feature_vector.append(passed_courses[course])
+        else:
+            feature_vector.append(0)  # Chưa học hoặc không đạt
+    
+    # Result: [0, 4, 3, 0, 0, 3, 2, ..., 1]  (53 elements)
+    #         CT100, CT101, CT112, ...
+    #         2TC,   4TC,   3TC, ...
+    return feature_vector
+```
+
+**Step 4: Normalize Feature & Predict Cluster**
+```python
+def assign_to_cluster(student_id):
+    """
+    Xác định sinh viên thuộc cluster nào
+    """
+    # Step 1: Lấy feature vector (53 chiều)
+    features = get_student_features(student_id)
+    
+    # Step 2: Normalize (z-score) để match training data
+    features_normalized = scaler.transform([features])
+    
+    # Step 3: Predict cluster (0-4)
+    cluster_id = kmeans_model.predict(features_normalized)[0]
+    
+    # Result: 0, 1, 2, 3, hoặc 4
+    return cluster_id
+```
+
+**Step 5: Tìm sinh viên cùng cluster**
+```python
+def find_similar_students(student_id):
+    """
+    Tìm các sinh viên khác cùng cluster
+    """
+    # Step 1: Xác định cluster của sinh viên target
+    student_cluster = assign_to_cluster(student_id)
+    
+    # Step 2: Lấy tất cả sinh viên khác
+    all_students = db.query(SinhVien).all()
+    
+    # Step 3: Duyệt và gán cluster cho mỗi sinh viên
+    similar_students = []
+    for student in all_students:
+        if student.StudentID != student_id:  # Loại bỏ chính sinh viên
+            other_cluster = assign_to_cluster(student.StudentID)
+            if other_cluster == student_cluster:
+                similar_students.append(student.StudentID)
+    
+    # Result: ['B2100001', 'B2100023', 'B2100045', ...]
+    return similar_students
+```
+
+**Step 6: Phân tích môn họ học tiếp theo**
+```python
+def analyze_next_courses(student_id):
+    """
+    Phân tích: Sinh viên ở cluster này, kỳ tiếp theo học gì?
+    """
+    # Step 1: Lấy danh sách sinh viên cùng cluster
+    similar_students = find_similar_students(student_id)
+    
+    # Step 2: Lấy kỳ hiện tại của sinh viên target
+    current_progress = db.query(TienTrinh).filter(
+        TienTrinh.StudentID == student_id
+    ).order_by(TienTrinh.Year.desc(), TienTrinh.Semester.desc()).first()
+    
+    current_year = current_progress.Year
+    current_semester = current_progress.Semester
+    
+    # Step 3: Xác định "kỳ tiếp theo"
+    if current_semester < 3:
+        next_year = current_year
+        next_semester = current_semester + 1
+    else:
+        next_year = current_year + 1
+        next_semester = 1
+    
+    # Step 4: Lấy các môn họ học ở kỳ tiếp theo
+    next_courses = db.query(TienTrinh).filter(
+        TienTrinh.StudentID.in_(similar_students),
+        TienTrinh.Year == next_year,
+        TienTrinh.Semester == next_semester
+    ).all()
+    
+    # Step 5: Đếm tần suất (course popularity in next semester)
+    course_frequency = Counter([record.CourseCode for record in next_courses])
+    
+    # Step 6: Lọc các môn sinh viên target chưa học
+    student_passed_courses = {
+        record.CourseCode for record in 
+        db.query(TienTrinh).filter(
+            TienTrinh.StudentID == student_id,
+            TienTrinh.Score >= 4.0
+        ).all()
+    }
+    
+    recommended_courses = [
+        course for course in course_frequency.keys()
+        if course not in student_passed_courses
+    ]
+    
+    # Result: [('CT101', 7), ('CT172', 6), ('QP010', 5), ...]
+    #         Mô tả: Trong cluster này, ở kỳ tiếp theo,
+    #         - 7 sinh viên học CT101
+    #         - 6 sinh viên học CT172
+    #         - v.v.
+    return course_frequency.most_common(8)
+```
+
+**Step 7: Return Gợi ý**
+```python
+def get_recommendations(student_id):
+    """
+    Return danh sách gợi ý cho sinh viên
+    """
+    cluster_id = assign_to_cluster(student_id)
+    recommended_courses = analyze_next_courses(student_id)
+    
+    recommendations = []
+    for course_code, frequency in recommended_courses:
+        course_info = db.query(MonHoc).filter(
+            MonHoc.CourseCode == course_code
+        ).first()
+        
+        recommendations.append({
+            'CourseCode': course_code,
+            'CourseName': course_info.CourseName,
+            'Credits': course_info.Credits,
+            'Semester': 'HK1 Năm 5',  # Tùy sinh viên hiện tại
+            'Year': 5,
+            'recommendation_group': 'HK1 Năm 5 - Các Môn Bổ Sung',
+            'recommendation_type': 'clustering_based',
+            'reason': f'Gợi ý dựa trên mô hình cluster {cluster_id} ({frequency} sinh viên cùng mô hình học này)',
+            'cluster_id': cluster_id,
+            'popularity': frequency
+        })
+    
+    return recommendations
+```
+
+#### Kết quả gợi ý cho sinh viên có tiến trình:
+- **Được gợi ý:** Top 8 môn phù hợp với mô hình học tập của sinh viên (cluster)
+- **Ví dụ:** Nếu sinh viên B2100001 thuộc Cluster 0 (Ổn định, tích luỹ đều)
+  - Hệ thống tìm tất cả sinh viên ở Cluster 0
+  - Xem họ học gì ở HK1 năm 5
+  - Gợi ý top 8 môn phổ biến nhất
+  - Ví dụ: CT555 (Luận văn), các môn chuyên đề, v.v.
+
+#### Logic phía sau:
+```
+Tại sao dùng K-Means Clustering?
+
+1. GIẢ THIẾT: 
+   - Sinh viên có mô hình học tập tương tự → nên học môn tương tự
+   - Ví dụ: Nếu bạn "ổn định, tích luỹ đều" như Cluster 0
+   - Thì bạn nên học những môn mà Cluster 0 thường học
+
+2. QUY TRÌNH:
+   - Xây dựng "profile" sinh viên từ lịch sử (vector 53 chiều)
+   - So sánh profile với 5 clusters đã train từ 78 sinh viên
+   - Tìm sinh viên cùng cluster
+   - Phân tích môn họ học ở kỳ tiếp theo
+   - Gợi ý top 8 môn phù hợp
+
+3. VÍ DỤ:
+   - Sinh viên B2100045 có lịch sử: [0, 4, 3, 0, 2, ..., 1] (53 chiều)
+   - K-Means predict: Cluster 1 (Tăng đột biến theo kỳ)
+   - Tìm 10 sinh viên khác ở Cluster 1
+   - Họ học gì ở HK1 năm 5? → CT555, CT556, QP015, v.v.
+   - Gợi ý: Những môn này phù hợp với mô hình của B2100045
+```
+
+---
+
+### C. SO SÁNH SINH VIÊN MỚI vs SINH VIÊN CÓ TIẾN TRÌNH
+
+| Tiêu Chí | Sinh Viên Mới | Sinh Viên Có Tiến Trình |
+|---------|------|---------|
+| **Định nghĩa** | Không có TienTrinh (lần đầu) | Có ≥1 kỳ học (lịch sử học) |
+| **Dữ liệu input** | Không có | 53-chiều feature vector |
+| **Phương pháp gợi ý** | Fallback: Ontime graduates | K-Means Clustering |
+| **Dữ liệu tham khảo** | Sinh viên tốt (OnTime + Graduated) | Sinh viên cùng cluster |
+| **Số môn gợi ý** | Top 8 môn HK1 năm 1 | Top 8 môn HK tiếp theo |
+| **Năm/Kỳ được gợi ý** | Year 1, Semester 1 | Năm/kỳ hiện tại +1 |
+| **Độ cá nhân hóa** | Thấp (dùng mẫu chung) | Cao (dựa trên lịch sử cá nhân) |
+| **Độ chính xác** | Trung bình (~70%) | Cao (~85%+) |
+| **Model dùng** | Không dùng | K-Means (5 clusters) |
+| **Ví dụ** | B2200012 (mới) → HK1 Y1: CT100, TN010, QP010-QP013, TC100_2 | B2100045 (Cluster 1) → HK1 Y5: CT555, CT556, CT400, v.v. |
+
+---
+
+### D. FLOW CHART - Gợi ý Sinh Viên
+
+```
+┌─────────────────────────────────────┐
+│ Sinh viên vào /dashboard            │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────┐
+│ CHECK: Sinh viên có TienTrinh không?   │
+└────┬───────────────────────────────┬───┘
+     │ CÓ                             │ KHÔNG
+     │ (≥1 record)                    │ (0 records)
+     ▼                                ▼
+┌──────────────────────┐    ┌─────────────────────────┐
+│ CLUSTERING STRATEGY  │    │ FALLBACK STRATEGY       │
+├──────────────────────┤    ├─────────────────────────┤
+│ 1. Get features (53) │    │ 1. Query OnTime +       │
+│ 2. Normalize         │    │    Graduated students   │
+│ 3. Predict cluster   │    │ 2. Lấy HK1 năm 1 của họ│
+│ 4. Find similar SV   │    │ 3. Top 8 môn phổ biến   │
+│ 5. Analyze courses   │    │ 4. Return danh sách     │
+│ 6. Return top 8      │    │                         │
+└──────┬───────────────┘    └────────┬────────────────┘
+       │                            │
+       │ Cluster 0: CT555,          │ HK1 Y1: CT100, TN010,
+       │ CT556, ... (8 courses)     │ QP010-QP013, ... (8 courses)
+       │                            │
+       └────────────┬───────────────┘
+                    │
+                    ▼
+         ┌─────────────────────────┐
+         │ Display on Dashboard    │
+         │ - Recommendation group  │
+         │ - Course list (8 items) │
+         │ - Button "Xem chi tiết" │
+         └─────────────────────────┘
+```
+
+---
+
+### E. Code Path trong Hệ Thống
+
+**Cho Sinh Viên Mới:**
+```
+app.py: dashboard()
+  └─> recommend_next_courses(student_id)
+        └─> Kiểm tra TienTrinh (rỗng)
+              └─> recommend_for_new_student()
+                    └─> query OnTime + Graduated students
+                          └─> get HK1 Y1 courses
+                                └─> return top 8
+```
+
+**Cho Sinh Viên Có Tiến Trình:**
+```
+app.py: dashboard()
+  └─> recommend_next_courses(student_id)
+        └─> Kiểm tra TienTrinh (có dữ liệu)
+              └─> clustering_recommender_v2.get_recommendations()
+                    ├─> get_student_features() → 53-chiều vector
+                    ├─> assign_to_cluster() → K-Means predict
+                    ├─> find_similar_students() → Sinh viên cùng cluster
+                    └─> analyze_next_courses() → top 8 môn HK tiếp theo
+```
+
+
+### 7. Clustering & K-Means Model
+- **Module:** `recommender/train_model.py`
+- **Chức năng:**
+  - Train K-Means (k=5) trên dữ liệu sinh viên từ file Excel
+  - Features: 663 chiều (51 môn × 13 kỳ)
+  - Standardize: StandardScaler (z-score normalization)
+  - Lưu model: `models/kmeans_model.pkl`
+  - Tự động train lần đầu nếu model chưa tồn tại
+  
+- **Route:** `POST /train` (endpoint để train lại model)
+  - Params: `excel_path` (đường dẫn file Excel)
+  - Response: JSON với đường dẫn model
+  
+- **5 Cluster được xác định:**
+  - Cluster 0: Ổn định, tích luỹ đều
+  - Cluster 1: Tăng đột biến theo kỳ
+  - Cluster 2: Singleton / Bất thường
+  - Cluster 3: Thiếu nền tảng
+  - Cluster 4: Xuất sắc / Dẫn đầu
+
+---
+
+## 📚 CHỨC NĂNG 5 KẾ HOẠCH HỌC TẬP
+
+### 8. Hiển thị 5 Kế Hoạch Học Tập
+- **Route:** `GET /learning-plans`
+- **Chức năng:**
+  - Tải file JSON: `data/learning_plans_5_clusters.json` (hoặc `data/learning_plans_uploaded.json` nếu có upload)
+  - Hiển thị 5 kế hoạch tương ứng 5 clusters
+  - **Mỗi kế hoạch chứa:**
+    - Tên kế hoạch & mô tả chi tiết
+    - 📚 **Danh sách môn học chi tiết theo 4 học kỳ:**
+      - Kỳ 1, 2, 3, 4 (mỗi kỳ: tên môn, tín chỉ, loại, độ ưu tiên)
+    - 📊 **Biểu đồ tín chỉ theo kỳ** (Chart.js)
+  
+  - **Ẩn thông tin:**
+    - Mã sinh viên (top_student)
+    - GPA cụ thể
+    - Mã cluster
+  
+- **Dữ liệu:** `data/learning_plans_5_clusters.json` (JSON structure)
+- **UI Template:** `learning_plans.html` (Bootstrap 5, responsive)
+
+### 9. Download File Kế Hoạch - PDF Format
+- **Route:** `GET /download-plan-pdf?cluster_id={0-4}`
+- **Chức năng:**
+  - Tạo file PDF từ kế hoạch học tập
+  - Tên file: `KeHoach_Nhom{cluster_id}.pdf`
+  - MIME type: `application/pdf`
+  - **Nội dung PDF:**
+    - Tiêu đề kế hoạch (với màu sắc theo cluster)
+    - Mô tả & learning style
+    - Giờ học/tuần
+    - **Danh sách môn học chi tiết theo kỳ học:**
+      - Mỗi kỳ: STT, tên môn (đầy đủ), tín chỉ
+      - Tất cả 53+ môn thực tế từ file Excel
+    - Bảng theo định dạng chuyên nghiệp
+  
+  - **Tính năng:**
+    - Support Unicode tiếng Việt (fonts: Arial, Liberation Sans)
+    - Định dạng A4, margin chuẩn
+    - Đầy đủ tên môn không cắt chữ
+    - In được trực tiếp từ browser
+  
+  - **Trạng thái:** ✅ Hoạt động từ trang `/learning-plans`
+    - Nút "📥 Tải xuống PDF →" trên mỗi card kế hoạch
+
+### 10. Download File Kế Hoạch - JSON Format (Legacy)
+- **Route:** `GET /download-plan`
+- **Chức năng:**
+  - Download file JSON chứa 5 kế hoạch học tập (không dùng thường xuyên)
+  - Tên file: `learning_plans_5_clusters.json` hoặc `learning_plans_full.json`
+  - MIME type: `application/json`
+  - Cho phép backup, import vào hệ thống khác, share với bạn bè
+  
+- **Trạng thái:** ✅ Dự phòng (thường dùng PDF)
+
+---
+
+## 🔒 CHỨC NĂNG QUẢN TRỊ VIÊN (ADMIN SYSTEM)
+
+### 26. Đăng Nhập Admin
+- **Route:** `POST /admin/login`
+- **Chức năng:**
+  - Form riêng cho admin (tab "🔐 Admin" trong trang login)
+  - Xác thực: admin_id + password (mặc định: admin / admin123)
+  - Lưu session: `admin_id`, `is_admin` = True
+  - Flash message nếu sai tài khoản
+  
+- **UI:** Unified login page `login.html` với 2 tabs:
+  - Tab 1 (Xanh): "👤 Sinh Viên" → form đăng nhập sinh viên
+  - Tab 2 (Đỏ): "🔐 Admin" → form đăng nhập admin
+  - JavaScript `switchTab()` để chuyển tab
+
+### 27. Admin Dashboard
+- **Route:** `GET /admin/dashboard`
+- **Yêu cầu:** Phải đăng nhập là admin
+- **Chức năng:**
+  - Hiển thị thống kê hệ thống:
+    - Tổng số sinh viên
+    - Tổng số môn học
+    - Tổng records tiến trình (enrollments)
+    - Trạng thái kết nối database
+    - Thông tin model K-Means (nếu có)
+  
+  - **Navigation buttons:**
+    - "👥 Quản Lý Sinh Viên" → `/admin/students`
+    - "📚 Quản Lý Môn Học" → `/admin/courses`
+    - "⚙️ Hệ Thống" → (tùy chọn)
+    - "🚪 Đăng Xuất" → `/admin/logout`
+  
+  - **Bảng dữ liệu:**
+    - `SinhVien`, `MonHoc`, `TienTrinh`
+  
+- **UI Template:** `admin_dashboard.html` (Bootstrap 5, admin theme)
+
+### 28. Quản Lý Sinh Viên (Admin)
+- **Route:** `GET /admin/students`
+- **Yêu cầu:** Admin login
+- **Chức năng:**
+  - Hiển thị danh sách tất cả sinh viên
+  - Cột: Mã sinh viên, Họ tên, Số môn học, Tích luỹ TC, GPA, Trạng thái
+  - **Action buttons (per student):**
+    - ✏️ Sửa thông tin
+    - 📊 Xem chi tiết tiến trình
+    - ❌ Xóa sinh viên
+  
+  - **Tính năng:**
+    - Phân trang (20 sinh viên/trang)
+    - Tìm kiếm theo mã/tên
+    - Sắp xếp theo cột
+    - Bulk action (export CSV)
+  
+- **UI Template:** `admin_students.html`
+
+### 29. Quản Lý Môn Học (Admin)
+- **Route:** `GET /admin/courses`
+- **Yêu cầu:** Admin login
+- **Chức năng:**
+  - Hiển thị danh sách tất cả môn học (90+ môn)
+  - Cột: Mã môn, Tên môn, Tín chỉ, Loại, Tiên quyết
+  - **Action buttons:**
+    - ✏️ Sửa thông tin
+    - 📖 Xem sinh viên học
+    - ❌ Xóa môn
+    - ➕ Thêm tiên quyết
+  
+  - **Tính năng:**
+    - Tìm kiếm, sắp xếp
+    - Bulk import từ Excel
+    - Export danh sách
+  
+- **UI Template:** `admin_courses.html`
+
+### 30. Admin Logout
+- **Route:** `GET /admin/logout`
+- **Chức năng:**
+  - Xoá session admin
+  - Chuyển hướng về trang đăng nhập
+  - Flash message "Đã đăng xuất"
+
+### 31. Unified Login Page (Student + Admin)
+- **Routes:** `GET /login`, `GET /`
+- **Template:** `login.html`
+- **Chức năng:**
+  - Một trang login chung cho cả sinh viên và admin
+  - JavaScript tab switching:
+    - Tab "👤 Sinh Viên" (màu xanh): POST `/login` (student login)
+    - Tab "🔐 Admin" (màu đỏ): POST `/admin/login` (admin login)
+  
+  - **Logic:**
+    - Khi form submit, tự động detect dựa trên tab active
+    - Sinh viên → redirect `/dashboard`
+    - Admin → redirect `/admin/dashboard`
+  
+  - **Styling:**
+    - Bootstrap 5 responsive
+    - Card design đẹp
+    - Highlight active tab
+
+---
+
+### 37. Phân Tích Tiên Quyết (Prerequisite Utils)
+- **Module:** `recommender/prerequisite_utils.py`
+- **Chức năng:**
+  - Kiểm tra tiên quyết môn học
+  - Xác định môn học có thể học được dựa trên môn đã học
+  - Lọc môn gợi ý không vi phạm tiên quyết
+  
+- **Bảng dữ liệu:** `TienQuyet` (CourseCode, PrerequisiteCode)
+
+### 38. Recommender Thông Minh (Smart Course Recommender)
+- **Module:** `recommender/smart_course_recommender.py`
+- **Chức năng:**
+  - Gợi ý giáo dục thêm với logic đặc biệt
+  - Có thể không được dùng trong flow chính (legacy)
+
+### 39. Recommender Phiên Bản 1 & 2 (Clustering-based)
+- **Module:** 
+  - `recommender/clustering_recommender.py` (v1)
+  - `recommender/clustering_recommender_v2.py` (v2 - hiện dùng)
+- **Chức năng:**
+  - Assign sinh viên mới vào cluster (dựa trên K-Means)
+  - Tìm sinh viên cùng cluster
+  - Phân tích mô hình học tập tương tự
+  - Gợi ý môn học dựa trên cluster
+  - Return: Danh sách môn prioritized
+
+### 40. Ontime Graduate Recommender (Fallback Strategy)
+- **Module:** `recommender/ontime_graduate_recommender.py`
+- **Chức năng chính:**
+  - **recommend_based_on_ontime_graduates()**: Gợi ý từ sinh viên OnTime + Graduated
+  - **recommend_for_new_student()**: Gợi ý cho sinh viên mới (HK1 năm 1)
+  - Lọc: sinh viên có OnTime=True, Graduated=True, Pass_Rate >= 50%
+  - Phân tích: Tất cả sinh viên này học môn gì ở HK1 năm 1?
+  - Gợi ý: Top 8 môn phổ biến (từ khoảng 26 môn trong HK1 năm 1)
+  
+- **Fallback trong flow:**
+  - Gọi `recommend_based_on_ontime_graduates()`
+  - Nếu sinh viên không có TienTrinh (mới) → tự động gọi `recommend_for_new_student()`
+
+### 41. Train Model (K-Means & Scaler)
+- **Module:** `recommender/train_model.py`
+- **Chức năng:**
+  - Train K-Means (k=5) trên dữ liệu sinh viên từ file Excel
+  - Features: 53 chiều (53 unique courses)
+  - Standardize: StandardScaler (z-score normalization)
+  - Lưu models:
+    - `models/kmeans_model.pkl` (K-Means model)
+    - `models/scaler.pkl` (StandardScaler)
+  - Tự động train lần đầu nếu model chưa tồn tại
+  
+- **Route:** `POST /train` (endpoint để train lại model)
+  - Params: `excel_path` (đường dẫn file Excel)
+  - Response: JSON với đường dẫn models
+
+## 📱 CHỨC NĂNG GIAO DIỆN (UI)
+
+### 14. Template `login.html`
+- Form đăng nhập: Mã sinh viên + Mật khẩu
+- Submit: POST `/login`
+
+### 15. Template `student_dashboard.html`
+- Header: Thông tin sinh viên, nút logout, nút menu
+- Section 1: Thông tin tín chỉ (Progress bar, tổng TC, TC còn lại)
+- Section 2: Lịch sử học tập (Bảng môn học đã học)
+- Section 3: Gợi ý môn học tiếp theo (Danh sách + nút xem chi tiết)
+- Navigation buttons: "📚 5 Kế Hoạch Học Tập", "Xem HK1 Năm 5"
+
+### 16. Template `learning_plans.html`
+- Header: Tiêu đề + Quay lại button
+- 5 Plan Cards (color-coded by cluster):
+  - Card header (tên, mô tả)
+  - Meta info: Giờ/tuần, Learning style, Rủi ro
+  - Mục tiêu
+  - Danh sách môn theo kỳ (Bảng)
+  - Biểu đồ tín chỉ (Chart.js)
+  - Mẹo học tập
+- Footer: Hướng dẫn sử dụng
+
+
+
+### 19. Template `index.html`
+- Tương tự `login.html` (hoặc redirect to login)
+
+---
+
+## 💾 CHỨC NĂNG DỮ LIỆU
+
+## 💾 CHỨC NĂNG DỮ LIỆU & FILE MANAGEMENT
+
+### Data Files Structure
+- **`data/learning_plans_full.json`**: 
+  - 5 kế hoạch học tập (nhóm 0-4)
+  - Mỗi plan: 9 kỳ học, 50+ môn thực tế từ Excel
+  - Tổng: ~110-120 TC per plan (từ 156 TC Excel distributed)
+  - Fields: cluster_id, name, description, objectives, color, main_risk, top_student, key_tips, semesters[]
+  - Môn học: lấy từ Excel (53 unique courses)
+
+- **`data/student_data_100-2.xlsx`**:
+  - 100 sinh viên (B2100001 - B2100078, B2200012)
+  - 5 năm học (Year 1-5, 13 kỳ học)
+  - 53 unique courses
+  - 4000+ enrollment records (TienTrinh)
+  - **Kỳ học có sẵn:**
+    - Year 1: Kỳ 1 (13 TC), Kỳ 2 (20 TC), Kỳ 3 (1 TC)
+    - Year 2: Kỳ 1 (17 TC), Kỳ 2 (16 TC), Kỳ 3 (3 TC)
+    - Year 3: Kỳ 1 (17 TC), Kỳ 2 (17 TC), Kỳ 3 (1 TC)
+    - Year 4: Kỳ 1 (18 TC), Kỳ 2 (15 TC), Kỳ 3 (3 TC)
+    - Year 5: Kỳ 1 (15 TC)
+    - **Total: 156 TC**
+
+- **`models/kmeans_model.pkl`**:
+  - K-Means model (k=5 clusters)
+  - Features: 53 chiều (môn học)
+  - Fitted trên 78 sinh viên
+  - Auto-load/train khi cần
+
+- **`models/scaler.pkl`**:
+  - StandardScaler cho z-score normalization
+  - Dùng để chuẩn hóa feature trước khi predict cluster
+
+### 35. Load & Xử Lý File Excel
+- **Module:** `etl/load_excel.py`
+- **Chức năng:**
+  - Đọc file `data/student_data_100-2.xlsx`
+  - Load 78 sinh viên + 4000+ enrollments
+  - Prepare data cho clustering & recommendation
+  - Return: DataFrame với columns (StudentID, Year, Semester, CourseCode, CourseName, Credits, Score, GPA, OnTime, Grad)
+
+### 36. Config & Database Connection
+- **File:** `config.py`
+- **Chức năng:**
+  - Kết nối MySQL: host, port, user, password, database
+  - Hỗ trợ reconnect khi mất kết nối
+  - Config Flask secret key
+  - Config session timeout
+
+---
+
+---
+
+## 🧪 CHỨC NĂNG TEST & DEBUG
+
+### 23. Test Files
+- **Các file test:**
+  - `test_new_student_recommender.py`: Unit test gợi ý sinh viên mới
+  - `test_integration_new_student.py`: Integration test
+  - `test_recommendation_B2200012.py`: Test gợi ý cụ thể
+  - `test_login_B2200012.py`: Test đăng nhập
+  - `test_clustering_integration.py`: Test clustering
+  - `demo_new_student.py`: Demo so sánh new vs old student
+  - Và 5+ test files khác
+
+### 24. Script Tiện Ích
+- `interactive_add_student.py`: Thêm sinh viên tương tác
+- `generate_sql_with_password.py`: Tạo SQL thêm sinh viên có hash password
+- `add_student_B2200012.py`: Script thêm sinh viên cụ thể
+- `check_year4_year5_data.py`: Kiểm tra dữ liệu năm 4-5
+
+---
+
+## 📊 CHỨC NĂNG ADVANCED (Tùy Chọn)
+
+### 32. A/B Test & So Sánh Chiến Lược
+- **File:** `compare_recommendation_approaches.py`
+- **Chức năng:**
+  - So sánh kết quả gợi ý từ nhiều chiến lược
+  - So sánh: Clustering vs OnTime graduates vs Smart recommender
+
+### 33. Clustering Performance Analysis
+- **Chức năng:**
+  - Phân tích độ tốt của K-Means model
+  - Tính Silhouette Score, Inertia
+  - Visualize cluster distribution
+
+### 34. Data Validation & Quality Check
+- **Chức năng:**
+  - Kiểm tra tính nhất quán dữ liệu
+  - Detect missing values, duplicates
+  - Report data quality metrics
+
+---
+
+## 📋 DANH SÁCH BẢNG DỮ LIỆU CHÍNH
+
+| Bảng | Cột Chính | Mục Đích |
+|------|-----------|---------|
+| `SinhVien` | StudentID, Password, HoTen, ... | Quản lý tài khoản sinh viên |
+| `MonHoc` | CourseCode, CourseName, Credits, ... | Danh mục môn học |
+| `TienTrinh` | StudentID, CourseCode, Year, Semester, Grade, Status | Lịch sử học |
+| `TienQuyet` | CourseCode, PrerequisiteCode | Tiên quyết môn |
+
+---
+
+## 🎯 LUỒNG HOẠT ĐỘNG CHÍNH
+
+### Luồng Sinh Viên (Student Flow):
+```
+1. Truy cập http://localhost:5000/
+   ↓
+2. Chọn tab "👤 Sinh Viên" → Đăng nhập
+   ↓
+3. POST /login (StudentID + Password)
+   ↓
+4. Vào Dashboard (/dashboard)
+   ├─ Hiển thị: thông tin cá nhân, progress bar TC
+   ├─ Lịch sử học (tất cả môn đã học)
+   └─ Gợi ý môn học tiếp theo (nếu có)
+   ↓
+5. Chọn "📚 5 Kế Hoạch Học Tập" → /learning-plans
+   ├─ Xem 5 nhóm học tập (0-4)
+   ├─ Xem chart tín chỉ per cluster
+   └─ Chọn nhóm phù hợp
+   ↓
+6. Nút "📥 Tải xuống PDF →" trên mỗi kế hoạch
+   ├─ GET /download-plan-pdf?cluster_id={0-4}
+   └─ Download KeHoach_Nhom{id}.pdf (Unicode tiếng Việt)
+   ↓
+7. Chọn "🚪 Logout" → xoá session
+```
+
+### Luồng Admin (Admin Flow):
+```
+1. Truy cập http://localhost:5000/login
+   ↓
+2. Chọn tab "🔐 Admin" → Đăng nhập
+   ↓
+3. POST /admin/login (admin_id + password)
+   ↓
+4. Vào Admin Dashboard (/admin/dashboard)
+   ├─ Xem thống kê: SV, Môn, Tiến trình
+   └─ Navigation: Students, Courses, System
+   ↓
+5. "👥 Quản Lý Sinh Viên" (/admin/students)
+   ├─ Danh sách tất cả sinh viên
+   ├─ Tìm kiếm, sắp xếp, phân trang
+   └─ Action: Edit, View, Assign Cluster, Delete
+   ↓
+6. "📚 Quản Lý Môn Học" (/admin/courses)
+   ├─ Danh sách 90+ môn học
+   ├─ Tìm kiếm, sắp xếp
+   └─ Action: Edit, View Students, Delete
+   ↓
+7. "🚪 Logout" → xoá session admin
+```
+
+### Luồng Gợi Ý Môn Học (Recommendation Engine):
+```
+Backend Flow:
+1. Sinh viên vào /dashboard
+   ↓
+2. System check: TienTrinh có dữ liệu không?
+   ├─ CÓ: → Gọi clustering_recommender_v2.py
+   │  ├─ Load K-Means model
+   │  ├─ Assign sinh viên vào cluster
+   │  ├─ Tìm sinh viên cùng cluster
+   │  ├─ Phân tích môn họ học tiếp theo
+   │  └─ Return danh sách gợi ý (prioritized)
+   │
+   └─ KHÔNG: → Gọi ontime_graduate_recommender.py
+      ├─ Lấy sinh viên: OnTime=True, Graduated=True
+      ├─ Phân tích HK1 năm 1 của họ
+      ├─ Return top 8 môn phổ biến
+      └─ Dùng làm default gợi ý
+   ↓
+3. Display trên dashboard
+   ├─ Grouped by: HK1 Năm 5, Các môn bổ sung
+   └─ Nút "Xem chi tiết" → /recommendations/hk1-nam5
+```
+
+---
+
+## ✅ KIỂM DANH CÁC CHỨC NĂNG
+
+- ✅ Đăng nhập / Đăng xuất (Student)
+- ✅ Đăng nhập / Đăng xuất (Admin)
+- ✅ Unified login page với 2 tabs
+- ✅ Dashboard chính (Student)
+- ✅ Admin Dashboard với thống kê
+- ✅ Quản lý sinh viên (Admin)
+- ✅ Quản lý môn học (Admin)
+- ✅ Lịch sử học tập
+- ✅ Gợi ý môn học (K-Means clustering)
+- ✅ Gợi ý sinh viên mới (Fallback)
+- ✅ Gợi ý HK1 năm 5 chi tiết
+- ✅ 5 kế hoạch học tập
+- ✅ Biểu đồ tín chỉ theo kỳ (Chart.js)
+- ✅ **PDF download kế hoạch (Unicode tiếng Việt)**
+- ✅ JSON download kế hoạch (legacy)
+- ✅ Upload file kế hoạch
+- ✅ Tiên quyết môn
+- ✅ Clustering (K-Means, k=5)
+- ✅ Train model từ Excel
+- ✅ Session management (Student + Admin)
+- ✅ Flash messages (error/success)
+- ✅ Mobile responsive (Bootstrap 5)
+- ✅ **Dữ liệu từ Excel (53+ môn học thực tế)**
+- ✅ **Font Unicode tiếng Việt trong PDF**
+
+---
+
+## 🚀 CHỨC NĂNG SẮP TỚI (Optional Enhancements) (để 1 số cái vào hướng phát triển trong word)
+
+- [ ] Improved PDF layout (multi-page, header/footer)
+- [ ] Export kế hoạch thành Excel
+- [ ] Assign sinh viên vào cluster cụ thể (Admin)
+- [ ] Personalized plan recommendation
+- [ ] Interactive plan customization
+- [ ] Database integration để track cluster assignment
+- [ ] Share plan via link/email
+- [ ] Plan progress tracking & checkoff
+- [ ] Cache K-Means model
+- [ ] API endpoints riêng (RESTful)
+- [ ] Advanced admin analytics & reports
+- [ ] Email notification cho sinh viên
+- [ ] Mobile app (Flutter/React Native)
+- [ ] Dark mode UI theme
+- [ ] Multi-language support (English)
+
+---
+
+

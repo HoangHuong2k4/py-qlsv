@@ -1,0 +1,248 @@
+/* Trang đăng nhập */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header Banner */
+#header {
+    width: 100%;
+    height: 99px;
+    /* margin: 0px 0px 10px 0px; */
+    padding: 0px;
+    background: url(https://accounts.ctu.edu.vn/authenticationendpoint/extensions/layouts/custom/carbon.super/assets/images/bg_banner.png) repeat-x center top;
+}
+
+#banner {
+    position: relative;
+    width: 981px;
+    height: 99px;
+    margin: 0px auto;
+    background: url(https://accounts.ctu.edu.vn/authenticationendpoint/extensions/layouts/custom/carbon.super/assets/images/banner.png) no-repeat left top;
+}
+
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    background: #f0f4f8;
+}
+
+.login-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 450px;
+    overflow: hidden;
+}
+
+.login-header-bar {
+    background: #1f5ca9;
+    padding: 1rem;
+    text-align: center;
+}
+
+.login-header-bar h3 {
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.login-form {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 1rem;
+    color: #757575;
+    font-size: 16px;
+    z-index: 1;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 3rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    font-size: 15px;
+    transition: all 0.2s;
+    background: white;
+    color: #202124;
+}
+
+.form-group input::placeholder {
+    color: #9aa0a6;
+    font-size: 15px;
+}
+
+.form-group input:focus {
+    border-color: #673AB7;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.1);
+}
+
+.toggle-password {
+    position: absolute;
+    right: 1rem;
+    color: #757575;
+    font-size: 16px;
+    cursor: pointer;
+    z-index: 1;
+    transition: color 0.2s;
+}
+
+.toggle-password:hover {
+    color: #673AB7;
+}
+
+.login-button {
+    background: #1f5ca9;
+    color: white;
+    border: none;
+    padding: 0.875rem;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.login-button:hover {
+    background: #5E35B1;
+}
+
+.login-button:active {
+    background: #512DA8;
+    transform: translateY(1px);
+}
+
+/* Flash messages */
+.flash-messages {
+    padding: 1rem 2rem 0;
+}
+
+.flash {
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 14px;
+}
+
+.flash.error {
+    background: #fde7e9;
+    color: #b71c1c;
+    border: 1px solid #ef9a9a;
+}
+
+.flash.info {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #90caf9;
+}
+
+.flash.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+    background: white;
+    border-bottom: 2px solid #e0e0e0;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    gap: 0;
+}
+
+.nav-tab {
+    padding: 1rem 2rem;
+    text-decoration: none;
+    color: #666;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    display: inline-block;
+}
+
+.nav-tab:hover {
+    color: #673AB7;
+    background: #f5f5f5;
+}
+
+.nav-tab.active {
+    color: #673AB7;
+    border-bottom-color: #673AB7;
+    background: #f9f9f9;
+}
+
+.nav-tab.logout-tab {
+    margin-left: auto;
+    color: #d32f2f;
+}
+
+.nav-tab.logout-tab:hover {
+    color: #b71c1c;
+    background: #ffebee;
+}
+
+/* Footer */
+.footer {
+    background: white;
+    border-top: 1px solid #e0e0e0;
+    padding: 1.5rem;
+    text-align: center;
+    margin-top: 3rem;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.footer-content p {
+    color: #424242;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0.25rem 0;
+}
+
+.footer-content strong {
+    color: #212121;
+}

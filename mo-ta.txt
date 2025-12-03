@@ -1,0 +1,20 @@
+lTrong hình thức đào tạo tín chỉ, mỗi sinh viên phải lập một lộ trình học tập cá nhân, gọi là kế hoạch học tập, trong đó xác định các môn học sẽ học ở từng học kỳ cho đến khi hoàn thành chương trình đào tạo. Thời gian để một sinh viên hoàn thành chương trình đào tạo theo thiết kế là num_of_planned_terms học kỳ liên tục. Nếu sinh viên hoàn thành chương trình đào tạo trong khoảng thời gian không quá  num_of_planned_terms học kỳ thì được gọi là tốt nghiệp đúng hạn.
+Với mỗi chương trình đào tạo, người ta thường thiết kế các kế hoạch học tập mẫu để cho sinh viên mới bắt đầu chương trình đào tạo tham khảo lấy làm kế hoạch học tập của mình. Các kế hoạch học tập mẫu sẽ được xây dựng với thời gian đào tạo theo thiết kế. Kết thúc mỗi học kỳ, dựa vào kết quả đạt hay không đạt của các môn học đã học trong học kỳ, sinh viên sẽ điều chỉnh lại kế hoạch học tập của mình cho các học kỳ tiếp theo.
+Kế hoạch học tập là một trong những yếu tố quan trọng quyết định đến việc sinh viên tốt nghiệp có đúng hạn hay không. Việc lập kế hoạch với nhiều môn học trong học kỳ có thể dẫn đến việc quá tải làm sinh viên không đạt được môn học đã đăng ký học trong học kỳ, và như vậy sinh viên phải học lại các môn học không đạt sẽ dẫn đến sinh viên tốt nghiệp không đúng hạn. Ngược lại việc chọn quá ít môn trong một học kỳ sẽ trực tiếp làm cho sinh viên tốt nghiệp không đúng hạn. Thứ tự môn học trước học sau cũng có ảnh hưởng đến kết quả học tập của sinh viên từ đó ảnh hưởng đến khả năng tốt nghiệp đúng hạn của sinh viên.
+Như vậy,  hai vấn đề đặt ra ở đây là: làm sao để xây dựng được các kế hoạch học tập mẫu hiệu quả cho sinh viên đầu khóa tham khảo và có những hỗ trợ gì để giúp sinh viên điều chỉnh kế hoạch học tập của mình cho các học kỳ tiếp theo một cách hiệu quả để giúp sinh viên có thể tốt nghiệp đúng hạn.
+Nghiên cứu này đề xuất một giải pháp dựa vào lịch sử học tập của các sinh viên đã tốt nghiệp đúng hạn để xây dựng các kế hoạch học tập mẫu kế hoạch học tập mẫu hiệu quả cho sinh viên mới đồng thời đề xuất các lộ trình điều chỉnh kế hoạch học tập cho các sinh viên đã học qua ít nhất một học kỳ.
+
+Giả sử:
+- Số lượng học kỳ theo thiết kế là t
+- Tổng số môn học của cả chương trình là c
+- Môn học i học ở học kỳ j ký hiệu là Si.j, i=1->c; j=1->t
+- Vec tơ biểu diễn một kế hoạch học tập là p[c*t]= [S1.1, S2.1, S3.1,...Sc.1, S1.2, S2.2,.... S3.2, .....Sc.t]
+p[0]->p[c-1]: Môn học 1->c học ở học kỳ 1
+p[c]->p[2*c-1]: Môn học 1->c học ở học kỳ 2
+p[2c]->p[3*c-1]: Môn học 1->c học ở học kỳ 3
+…
+Nếu một sinh viên học và đạt môn học i ở học kỳ j thì p[k]=1, với k=c*(j-1) +i-1
+
+----------------------
+
+

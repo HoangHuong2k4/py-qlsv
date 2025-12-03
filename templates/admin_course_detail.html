@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết Môn học</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a href="/admin/courses" class="navbar-brand">
+                <i class="fas fa-arrow-left"></i> Quay lại danh sách
+            </a>
+            <div class="d-flex">
+                <span class="text-white me-3">{{ admin_name }}</span>
+                <a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <h2 class="mb-4"><i class="fas fa-book-open"></i> Chi tiết Môn học</h2>
+        
+        <!-- Thông tin môn học -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Thông tin môn học: {{ course.CourseCode }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td width="35%" class="fw-bold">Mã môn:</td>
+                                <td><span class="badge bg-primary fs-6">{{ course.CourseCode }}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Tên môn:</td>
+                                <td><strong>{{ course.CourseName }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Số tín chỉ:</td>
+                                <td><span class="badge bg-info">{{ course.Credits }} TC</span></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td width="35%" class="fw-bold">Loại:</td>
+                                <td>
+                                    {% if course.Type == 'Bắt buộc' %}
+                                        <span class="badge bg-danger">{{ course.Type }}</span>
+                                    {% elif course.Type == 'Cơ sở' %}
+                                        <span class="badge bg-primary">{{ course.Type }}</span>
+                                    {% elif course.Type == 'Chuyên ngành' %}
+                                        <span class="badge bg-success">{{ course.Type }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ course.Type }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Ghi chú:</td>
+                                <td>{{ course.Note or 'Không có' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Số SV học:</td>
+                                <td><strong class="text-success">{{ students|length }}</strong> sinh viên</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Danh sách sinh viên học môn này (theo học kỳ) -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-users"></i> Danh sách sinh viên học môn này ({{ students|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if students %}
+                    <!-- Nhóm theo học kỳ -->
+                    {% set semesters = {} %}
+                    {% for s in students %}
+                        {% set key = (s.Year, s.Semester) %}
+                        {% if key not in semesters %}
+                            {% set _ = semesters.__setitem__(key, []) %}
+                        {% endif %}
+                        {% set _ = semesters[key].append(s) %}
+                    {% endfor %}
+                    
+                    <!-- Hiển thị từng học kỳ -->
+                    {% for year in range(1, 6) %}
+                        {% for sem in range(1, 4) %}
+                            {% set key = (year, sem) %}
+                            {% if key in semesters %}
+                                {% set sem_students = semesters[key] %}
+                                
+                                <div class="mb-4">
+                                    <h6 class="text-primary">
+                                        <i class="fas fa-calendar-alt"></i> 
+                                        Năm {{ year }} - Học kỳ {{ sem }}
+                                        <span class="badge bg-info">{{ sem_students|length }} SV</span>
+                                    </h6>
+                                    
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th width="15%">Mã SV</th>
+                                                    <th width="30%">Họ tên</th>
+                                                    <th width="15%">Điểm</th>
+                                                    <th width="15%">Trạng thái</th>
+                                                    <th width="25%">Thao tác</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for s in sem_students %}
+                                                <tr>
+                                                    <td><strong>{{ s.StudentID }}</strong></td>
+                                                    <td>{{ s.HoTen }}</td>
+                                                    <td class="text-center">
+                                                        {% if s.Score >= 8.5 %}
+                                                            <span class="badge bg-success">{{ s.Score }}</span>
+                                                        {% elif s.Score >= 7.0 %}
+                                                            <span class="badge bg-primary">{{ s.Score }}</span>
+                                                        {% elif s.Score >= 5.5 %}
+                                                            <span class="badge bg-info">{{ s.Score }}</span>
+                                                        {% elif s.Score >= 4.0 %}
+                                                            <span class="badge bg-warning text-dark">{{ s.Score }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-danger">{{ s.Score }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-{{ 'success' if s.Status == 'Đã học' else 'secondary' }}">
+                                                            {{ s.Status }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <a href="/admin/students/view/{{ s.StudentID }}" 
+                                                           class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-user"></i> Xem SV
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-center text-muted">Chưa có sinh viên nào học môn này</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="mt-4">
+            <a href="/admin/courses" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+            <a href="/admin/courses/delete/{{ course.CourseCode }}" 
+               class="btn btn-danger float-end"
+               onclick="return confirm('Xác nhận xóa môn học {{ course.CourseCode }}?\nCảnh báo: Sẽ xóa tất cả tiến trình liên quan!')">
+                <i class="fas fa-trash"></i> Xóa môn học
+            </a>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

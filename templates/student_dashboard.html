@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard sinh viên</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/login.css">
+</head>
+<body>
+  <!-- Header Banner -->
+  <div id="header">
+    <div id="banner"></div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="nav-tabs">
+    <div class="nav-container">
+      <a href="/study-plan" class="nav-tab">Kế hoạch học tập</a>
+      <a href="/dashboard" class="nav-tab active">Gợi ý môn học</a>
+      <a href="/profile" class="nav-tab">Thông tin cá nhân</a>
+      <a href="/logout" class="nav-tab logout-tab">Đăng xuất</a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <h1>Học phần của {{ student_id }}</h1>
+
+    {% if credit_summary %}
+    <section class="card" style="background-color: #f0f8ff; border-left: 4px solid #4CAF50;">
+      <h2>📊 Tổng quan tín chỉ</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <div>
+          <strong>Đã tích lũy:</strong><br>
+          <span style="font-size: 1.5em; color: #4CAF50;">{{ credit_summary.earned }}</span> / {{ credit_summary.required }} tín chỉ
+        </div>
+        <div>
+          <strong>Còn lại:</strong><br>
+          <span style="font-size: 1.5em; color: #ff9800;">{{ credit_summary.remaining }}</span> tín chỉ
+        </div>
+        <div>
+          <strong>Tiến độ:</strong><br>
+          <span style="font-size: 1.5em; color: #2196F3;">{{ credit_summary.percentage }}%</span>
+        </div>
+      </div>
+      <p style="margin-top: 1rem; color: #666; font-size: 0.9em;">
+        <em>Mục tiêu: Hoàn thành 156 tín chỉ trong 4.5 năm (9 học kỳ) - Trung bình ~17.3 tín chỉ/học kỳ</em>
+      </p>
+    </section>
+    {% endif %}
+
+    <section class="card">
+      <h2>Môn đã học / tiến trình</h2>
+      {% if courses %}
+      <table>
+        <thead>
+          <tr><th>Mã môn</th><th>Tên môn học</th><th>Năm</th><th>Học kỳ</th><th>Số tín chỉ</th><th>Trạng thái</th><th>Điểm</th></tr>
+        </thead>
+        <tbody>
+          {% for c in courses %}
+          <tr>
+            <td>{{ c.CourseCode }}</td>
+            <td>{{ c.CourseName }}</td>
+            <td>{{ c.Year }}</td>
+            <td>{{ c.Semester }}</td>
+            <td>{{ c.Credits }}</td>
+            <td>{{ c.Status }}</td>
+            <td>{{ c.Score }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="muted">Không tìm thấy dữ liệu học phần cho sinh viên này.</p>
+      {% endif %}
+    </section>
+
+    {# Tách thành các nhóm #}
+    {% if recs %}
+      {% set thesis_recs = [] %}
+      {% set additional_recs = [] %}
+      {% set other_recs = [] %}
+      {% for r in recs %}
+        {% if (r.get('CourseCode') == 'CT555') and (r.get('recommended_year') == 5) and (r.get('recommended_semester') == 1) %}
+          {% if thesis_recs.append(r) %}{% endif %}
+        {% elif (r.get('recommended_year') == 5) and (r.get('recommended_semester') == 1) and (r.get('CourseCode') != 'CT555') %}
+          {% if additional_recs.append(r) %}{% endif %}
+        {% else %}
+          {% if other_recs.append(r) %}{% endif %}
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      {% set thesis_recs = [] %}
+      {% set additional_recs = [] %}
+      {% set other_recs = [] %}
+    {% endif %}
+
+    {% if thesis_recs %}
+    <section class="card">
+      <h2>🎓 Gợi ý luận văn tốt nghiệp (Học kỳ 1 năm 5)</h2>
+      <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
+        <em>Gợi ý cho sinh viên đã gần đủ 156 tín chỉ - chỉ cần thêm luận văn tốt nghiệp</em>
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Mã môn</th>
+            <th>Tên môn học</th>
+            <th>Tín chỉ</th>
+            <th>Năm học</th>
+            <th>Học kỳ</th>
+            <th>Điểm TB</th>
+            <th>Tỷ lệ đậu</th>
+            <th>Lý do gợi ý</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in thesis_recs %}
+          <tr>
+            <td><strong>{{ r.CourseCode }}</strong></td>
+            <td>{{ r.CourseName }}</td>
+            <td>{{ r.Credits }}</td>
+            <td><strong>Năm {{ r.recommended_year }}</strong></td>
+            <td><strong>HK{{ r.recommended_semester }}</strong></td>
+            <td>
+              {% if r.avg_score %}
+                {{ "%.2f"|format(r.avg_score) }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if r.pass_rate %}
+                {{ "%.1f"|format(r.pass_rate) }}%
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td style="font-size: 0.9em; color: #555;">
+              {% if r.recommendation_reason %}
+                {{ r.recommendation_reason }}
+              {% else %}
+                Gợi ý dựa trên sinh viên tương tự
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if additional_recs %}
+    <section class="card">
+      <h2>📚 Gợi ý các môn bổ sung (Học kỳ 1 năm 5)</h2>
+      <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
+        <em>Phần này đã được chuyển sang trang riêng.</em>
+      </p>
+      <p>
+        <a class="button" href="/recommendations/hk1-nam5">Xem các môn bổ sung cho HK1 Năm 5 →</a>
+      </p>
+    </section>
+    {% endif %}
+
+    {% if other_recs %}
+    <section class="card">
+      <h2>📖 Gợi ý học phần tiếp theo</h2>
+      <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
+        <em>Gợi ý dựa trên lịch sử học tập của các sinh viên đã tốt nghiệp đúng hạn</em>
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Mã môn</th>
+            <th>Tên môn học</th>
+            <th>Tín chỉ</th>
+            <th>Năm học</th>
+            <th>Học kỳ</th>
+            <th>Điểm TB</th>
+            <th>Tỷ lệ đậu</th>
+            <th>Lý do gợi ý</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in other_recs %}
+          <tr>
+            <td><strong>{{ r.CourseCode }}</strong></td>
+            <td>{{ r.CourseName }}</td>
+            <td>{{ r.Credits }}</td>
+            <td>
+              {% if r.recommended_year %}
+                <strong>Năm {{ r.recommended_year }}</strong>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if r.recommended_semester %}
+                <strong>HK{{ r.recommended_semester }}</strong>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if r.avg_score %}
+                {{ "%.2f"|format(r.avg_score) }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if r.pass_rate %}
+                {{ "%.1f"|format(r.pass_rate) }}%
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td style="font-size: 0.9em; color: #555;">
+              {% if r.recommendation_reason %}
+                {{ r.recommendation_reason }}
+              {% elif r.frequency %}
+                Được học bởi {{ r.frequency }} sinh viên tốt nghiệp đúng hạn tương tự
+              {% else %}
+                Gợi ý dựa trên sinh viên tương tự
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if not recs or (not thesis_recs and not additional_recs and not other_recs) %}
+    <section class="card">
+      <h2>Gợi ý học phần tiếp theo</h2>
+      <p class="muted">Không có gợi ý nào cho kỳ tiếp theo hoặc chưa đủ dữ liệu.</p>
+    </section>
+    {% endif %}
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p><strong>Trường Đại học Cần Thơ (Can Tho University)</strong></p>
+      <p>Khu II, đường 3/2, P. Xuân Khánh, Q. Ninh Kiều, TP. Cần Thơ.</p>
+      <p>Điện thoại: (84-292) 3832663 - (84-292) 3838474; Fax: (84-292) 3838474; Email: dhct@ctu.edu.vn.</p>
+    </div>
+  </footer>
+</body>
+</html>

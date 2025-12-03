@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gợi ý các môn bổ sung - HK1 Năm 5</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📚 Gợi ý các môn bổ sung (Học kỳ 1 năm 5)</h1>
+    <p class="muted">Sinh viên: <strong>{{ student_name or student_id }}</strong></p>
+
+    {% if additional_recs and additional_recs|length > 0 %}
+    <section class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Mã môn</th>
+            <th>Tên môn học</th>
+            <th>Tín chỉ</th>
+            <th>Năm học</th>
+            <th>Học kỳ</th>
+            <th>Điểm TB</th>
+            <th>Tỷ lệ đậu</th>
+            <th>Lý do gợi ý</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in additional_recs %}
+          <tr>
+            <td><strong>{{ r.CourseCode }}</strong></td>
+            <td>{{ r.CourseName }}</td>
+            <td>{{ r.Credits }}</td>
+            <td><strong>Năm {{ r.recommended_year }}</strong></td>
+            <td><strong>HK{{ r.recommended_semester }}</strong></td>
+            <td>
+              {% if r.avg_score %}
+                {{ "%.2f"|format(r.avg_score) }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if r.pass_rate %}
+                {{ "%.1f"|format(r.pass_rate) }}%
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td style="font-size: 0.9em; color: #555;">
+              {% if r.recommendation_reason %}
+                {{ r.recommendation_reason }}
+              {% else %}
+                Gợi ý dựa trên sinh viên tương tự
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% else %}
+      <section class="card">
+        <h2>Không có gợi ý phù hợp</h2>
+        <p class="muted">Hiện chưa có các môn bổ sung được đề xuất cho Học kỳ 1 năm 5.</p>
+      </section>
+    {% endif %}
+
+    <p><a href="/dashboard">← Quay lại trang tổng quan</a></p>
+  </div>
+</body>
+</html>
+
+
+
+

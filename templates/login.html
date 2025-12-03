@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập - Hệ thống Gợi ý Học tập</title>
+  <link rel="stylesheet" href="/static/login.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <!-- Header Banner -->
+  <div id="header">
+    <div id="banner"></div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="login-container">
+      <div class="login-header-bar">
+        <h3>ĐĂNG NHẬP</h3>
+      </div>
+      
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('student')">
+          <i class="fas fa-user"></i> Sinh viên
+        </button>
+        <button class="tab-btn" onclick="switchTab('admin')">
+          <i class="fas fa-user-shield"></i> Admin
+        </button>
+      </div>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-messages">
+            {% for category, msg in messages %}
+              <div class="flash {{ category }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <!-- Form Sinh viên -->
+      <form id="studentForm" action="/login" method="post" class="login-form">
+        <div class="form-group">
+          <i class="fas fa-user input-icon"></i>
+          <input name="student_id" type="text" placeholder="Mã sinh viên" required>
+        </div>
+
+        <div class="form-group">
+          <i class="fas fa-lock input-icon"></i>
+          <input name="password" type="password" placeholder="Mật khẩu" required>
+          <i class="fas fa-eye toggle-password" onclick="togglePassword(this)"></i>
+        </div>
+
+        <button type="submit" class="login-button" style="background: #1f5ca9;">
+          <i class="fas fa-sign-in-alt"></i> Đăng nhập Sinh viên
+        </button>
+        
+        <div class="text-center mt-2">
+          <small class="text-muted">Mật khẩu mặc định = Mã sinh viên</small>
+        </div>
+      </form>
+      
+      <!-- Form Admin -->
+      <form id="adminForm" action="/admin/login" method="post" class="login-form" style="display: none;">
+        <div class="form-group">
+          <i class="fas fa-user-shield input-icon"></i>
+          <input name="admin_id" type="text" placeholder="Admin ID" required>
+        </div>
+
+        <div class="form-group">
+          <i class="fas fa-lock input-icon"></i>
+          <input name="password" type="password" placeholder="Mật khẩu" required>
+          <i class="fas fa-eye toggle-password" onclick="togglePassword(this)"></i>
+        </div>
+
+        <button type="submit" class="login-button" style="background: #dc3545;">
+          <i class="fas fa-shield-alt"></i> Đăng nhập Admin
+        </button>
+        
+        <div class="text-center mt-2">
+          <small class="text-muted">Mặc định: admin / admin123</small>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p><strong>Trường Đại học Cần Thơ (Can Tho University)</strong></p>
+      <p>Khu II, đường 3/2, P. Xuân Khánh, Q. Ninh Kiều, TP. Cần Thơ.</p>
+      <p>Điện thoại: (84-292) 3832663 - (84-292) 3838474; Fax: (84-292) 3838474; Email: dhct@ctu.edu.vn.</p>
+    </div>
+  </footer>
+
+  <style>
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #e0e0e0;
+      margin: 0 2rem;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 1rem;
+      border: none;
+      background: #f5f5f5;
+      color: #666;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      border-bottom: 3px solid transparent;
+    }
+    .tab-btn:hover {
+      background: #e0e0e0;
+    }
+    .tab-btn.active {
+      background: white;
+      color: #1f5ca9;
+      border-bottom-color: #1f5ca9;
+    }
+    .tab-btn i {
+      margin-right: 0.5rem;
+    }
+  </style>
+
+  <script>
+    // Toggle password visibility
+    function togglePassword(icon) {
+      const input = icon.previousElementSibling;
+      const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+      input.setAttribute('type', type);
+      icon.classList.toggle('fa-eye');
+      icon.classList.toggle('fa-eye-slash');
+    }
+    
+    // Switch between tabs
+    function switchTab(tab) {
+      const studentForm = document.getElementById('studentForm');
+      const adminForm = document.getElementById('adminForm');
+      const tabs = document.querySelectorAll('.tab-btn');
+      
+      if (tab === 'student') {
+        studentForm.style.display = 'flex';
+        adminForm.style.display = 'none';
+        tabs[0].classList.add('active');
+        tabs[1].classList.remove('active');
+      } else {
+        studentForm.style.display = 'none';
+        adminForm.style.display = 'flex';
+        tabs[0].classList.remove('active');
+        tabs[1].classList.add('active');
+      }
+    }
+  </script>
+</body>
+</html>
