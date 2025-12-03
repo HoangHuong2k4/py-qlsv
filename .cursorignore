@@ -1,0 +1,3 @@
+# Ignore linter errors in Jinja2 templates
+templates/*.html
+
