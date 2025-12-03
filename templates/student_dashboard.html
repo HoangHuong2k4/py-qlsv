@@ -25,7 +25,12 @@
 
   <!-- Main Content -->
   <div class="container">
-    <h1>Học phần của {{ student_id }}</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h1 style="margin: 0;">Học phần của {{ student_id }}</h1>
+      <a href="{{ url_for('study_plan') }}" class="btn" style="background: #2196F3;">
+        📚 Xem 5 Kế Hoạch Học Tập
+      </a>
+    </div>
 
     {% if credit_summary %}
     <section class="card" style="background-color: #f0f8ff; border-left: 4px solid #4CAF50;">
@@ -47,6 +52,12 @@
       <p style="margin-top: 1rem; color: #666; font-size: 0.9em;">
         <em>Mục tiêu: Hoàn thành 156 tín chỉ trong 4.5 năm (9 học kỳ) - Trung bình ~17.3 tín chỉ/học kỳ</em>
       </p>
+      
+      <!-- Biểu đồ tín chỉ theo học kỳ -->
+      <div style="margin-top: 2rem;">
+        <h3 style="color: #1f5ca9; margin-bottom: 1rem;">📊 Biểu đồ tín chỉ theo học kỳ</h3>
+        <canvas id="creditsChart" style="max-height: 300px;"></canvas>
+      </div>
     </section>
     {% endif %}
 
@@ -98,7 +109,12 @@
 
     {% if thesis_recs %}
     <section class="card">
-      <h2>🎓 Gợi ý luận văn tốt nghiệp (Học kỳ 1 năm 5)</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="margin: 0;">🎓 Gợi ý luận văn tốt nghiệp (Học kỳ 1 năm 5)</h2>
+        <a href="{{ url_for('download_recommendations') }}" class="btn" style="background: #4CAF50;">
+          📥 Tải gợi ý
+        </a>
+      </div>
       <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
         <em>Gợi ý cho sinh viên đã gần đủ 156 tín chỉ - chỉ cần thêm luận văn tốt nghiệp</em>
       </p>
@@ -248,5 +264,70 @@
       <p>Điện thoại: (84-292) 3832663 - (84-292) 3838474; Fax: (84-292) 3838474; Email: dhct@ctu.edu.vn.</p>
     </div>
   </footer>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    {% if courses %}
+    // Tính tín chỉ theo học kỳ
+    const semesterData = {};
+    {% for c in courses %}
+      const key = 'Năm {{ c.Year }} HK{{ c.Semester }}';
+      if (!semesterData[key]) {
+        semesterData[key] = 0;
+      }
+      {% if c.Status == 'Đã học' %}
+        semesterData[key] += {{ c.Credits or 0 }};
+      {% endif %}
+    {% endfor %}
+    
+    // Tạo biểu đồ
+    const ctx = document.getElementById('creditsChart');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(semesterData),
+          datasets: [{
+            label: 'Tín chỉ đã học',
+            data: Object.values(semesterData),
+            backgroundColor: 'rgba(31, 92, 169, 0.8)',
+            borderColor: 'rgba(31, 92, 169, 1)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            title: {
+              display: true,
+              text: 'Phân bố tín chỉ theo học kỳ',
+              font: { size: 16, weight: 'bold' }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Số tín chỉ'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Học kỳ'
+              }
+            }
+          }
+        }
+      });
+    }
+    {% endif %}
+  </script>
 </body>
 </html>

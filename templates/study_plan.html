@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kế hoạch học tập</title>
-  <link rel="stylesheet" href="/static/login.css">
+  <title>5 Kế Hoạch Học Tập - CTU</title>
+  <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -13,49 +13,71 @@
     <div id="banner"></div>
   </div>
 
-  <!-- Navigation Tabs -->
-  <div class="nav-tabs">
-    <div class="nav-container">
-      <a href="/study-plan" class="nav-tab active">Kế hoạch học tập</a>
-      <a href="/recommendations" class="nav-tab">Gợi ý môn học</a>
-      <a href="/profile" class="nav-tab">Thông tin cá nhân</a>
-      <a href="/logout" class="nav-tab logout-tab">Đăng xuất</a>
-    </div>
-  </div>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+    <a href="/study-plan" class="nav-link active">📚 Kế hoạch học tập</a>
+    <a href="/profile" class="nav-link">👤 Thông tin cá nhân</a>
+    <a href="/logout" class="nav-link logout">🚪 Đăng xuất</a>
+  </nav>
 
   <!-- Main Content -->
-  <main class="main-content">
-    <div class="login-container">
-      <div class="login-header-bar">
-        <h3>ĐĂNG NHẬP</h3>
+  <div class="container">
+    <h1 style="color: #1f5ca9; margin-bottom: 0.5rem;">📚 5 Kế Hoạch Học Tập</h1>
+    <p style="color: #666; margin-bottom: 2rem;">
+      <em>Chọn kế hoạch phù hợp với mục tiêu và phong cách học tập của bạn</em>
+    </p>
+    
+    {% for plan in plans %}
+    <section class="card" style="border-left: 4px solid {{ plan.color }}; margin-bottom: 1.5rem;">
+      <div style="border-bottom: 2px solid {{ plan.color }}; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <h2 style="color: {{ plan.color }}; margin: 0;">{{ plan.name }}</h2>
+        <p style="color: #666; margin-top: 0.5rem;">{{ plan.description }}</p>
       </div>
       
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-messages">
-            {% for category, msg in messages %}
-              <div class="flash {{ category }}">{{ msg }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-
-      <form action="/login" method="post" enctype="multipart/form-data" class="login-form">
-        <div class="form-group">
-          <i class="fas fa-user input-icon"></i>
-          <input id="student_id" name="student_id" type="text" placeholder="Mã số đăng nhập" required>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <strong>📊 TC/học kỳ:</strong>
+          <p style="margin: 0.25rem 0; color: {{ plan.color }}; font-size: 1.1em; font-weight: bold;">{{ plan.credits_per_semester }}</p>
         </div>
-
-        <div class="form-group">
-          <i class="fas fa-lock input-icon"></i>
-          <input id="password" name="password" type="password" placeholder="Mật khẩu" required>
-          <i class="fas fa-eye toggle-password" id="togglePassword"></i>
+        <div>
+          <strong>⏱️ Tổng số kỳ:</strong>
+          <p style="margin: 0.25rem 0; color: {{ plan.color }}; font-size: 1.1em; font-weight: bold;">{{ plan.total_semesters }}</p>
         </div>
-
-        <button type="submit" class="login-button">Đăng nhập</button>
-      </form>
+      </div>
+      
+      <div style="margin-bottom: 1rem;">
+        <strong>✅ Ưu điểm:</strong>
+        <ul style="margin: 0.5rem 0; padding-left: 1.5rem; color: #333;">
+          {% for advantage in plan.advantages %}
+          <li style="margin: 0.25rem 0;">{{ advantage }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      
+      <div style="background-color: #f5f5f5; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+        <strong>👥 Phù hợp cho:</strong>
+        <p style="margin: 0.5rem 0 0 0; color: #555;">{{ plan.suitable_for }}</p>
+      </div>
+    </section>
+    {% endfor %}
+    
+    <section class="card" style="background-color: #fff3cd; border-left: 4px solid #FF9800;">
+      <h3 style="color: #FF9800; margin-top: 0;"><i class="fas fa-lightbulb"></i> Lưu ý quan trọng</h3>
+      <ul style="margin: 0; padding-left: 1.5rem; color: #333;">
+        <li style="margin: 0.5rem 0;">Các kế hoạch trên chỉ mang tính chất tham khảo</li>
+        <li style="margin: 0.5rem 0;">Bạn có thể điều chỉnh linh hoạt theo tình hình thực tế</li>
+        <li style="margin: 0.5rem 0;">Tham khảo ý kiến cố vấn học tập trước khi quyết định</li>
+        <li style="margin: 0.5rem 0;"><strong>Tổng tín chỉ tốt nghiệp: 156 TC</strong></li>
+      </ul>
+    </section>
+    
+    <div style="text-align: center; margin: 2rem 0;">
+      <a href="/dashboard" class="btn" style="background: #1f5ca9; padding: 0.75rem 2rem;">
+        <i class="fas fa-arrow-left"></i> Quay lại Dashboard
+      </a>
     </div>
-  </main>
+  </div>
 
   <!-- Footer -->
   <footer class="footer">
@@ -65,22 +87,5 @@
       <p>Điện thoại: (84-292) 3832663 - (84-292) 3838474; Fax: (84-292) 3838474; Email: dhct@ctu.edu.vn.</p>
     </div>
   </footer>
-
-  <script>
-    // Toggle password visibility
-    const togglePassword = document.getElementById('togglePassword');
-    const passwordInput = document.getElementById('password');
-    
-    if (togglePassword && passwordInput) {
-      togglePassword.addEventListener('click', function() {
-        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordInput.setAttribute('type', type);
-        this.classList.toggle('fa-eye');
-        this.classList.toggle('fa-eye-slash');
-      });
-    }
-  </script>
 </body>
 </html>
-
-

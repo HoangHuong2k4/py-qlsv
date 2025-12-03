@@ -211,6 +211,127 @@ def recommendations():
         return redirect(url_for('index'))
     return redirect(url_for('dashboard'))
 
+@app.route('/study-plan')
+def study_plan():
+    """Hiển thị 5 kế hoạch học tập"""
+    if 'student_id' not in session:
+        return redirect(url_for('index'))
+    
+    # 5 kế hoạch mẫu
+    plans = [
+        {
+            'id': 1,
+            'name': 'Kế hoạch Chuẩn (Ổn định)',
+            'color': '#4CAF50',
+            'description': 'Phù hợp cho sinh viên muốn học đều theo kỳ, không áp lực',
+            'credits_per_semester': '15-18 TC/kỳ',
+            'total_semesters': '9 kỳ',
+            'advantages': ['Áp lực thấp', 'Có thời gian cho hoạt động ngoại khóa', 'Dễ theo kịp'],
+            'suitable_for': 'Sinh viên thích học đều, không gấp gáp'
+        },
+        {
+            'id': 2,
+            'name': 'Kế hoạch Nhanh (Tốt nghiệp sớm)',
+            'color': '#FF9800',
+            'description': 'Học nhiều tín chỉ mỗi kỳ để tốt nghiệp sớm',
+            'credits_per_semester': '20-22 TC/kỳ',
+            'total_semesters': '7-8 kỳ',
+            'advantages': ['Tốt nghiệp sớm', 'Tiết kiệm thời gian', 'Nhanh vào nghề'],
+            'suitable_for': 'Sinh viên có nền tảng tốt, học lực khá giỏi'
+        },
+        {
+            'id': 3,
+            'name': 'Kế hoạch Vừa phải (Cân bằng)',
+            'color': '#2196F3',
+            'description': 'Cân bằng giữa học tập và cuộc sống',
+            'credits_per_semester': '17-19 TC/kỳ',
+            'total_semesters': '8-9 kỳ',
+            'advantages': ['Vừa sức', 'Cân bằng thời gian', 'Không quá áp lực'],
+            'suitable_for': 'Phần lớn sinh viên'
+        },
+        {
+            'id': 4,
+            'name': 'Kế hoạch Chậm (Tích lũy từ từ)',
+            'color': '#9C27B0',
+            'description': 'Học ít TC mỗi kỳ, tập trung chất lượng',
+            'credits_per_semester': '12-15 TC/kỳ',
+            'total_semesters': '10-11 kỳ',
+            'advantages': ['Học kỹ từng môn', 'Áp lực rất thấp', 'Điểm số cao'],
+            'suitable_for': 'Sinh viên đi làm thêm, có việc gia đình'
+        },
+        {
+            'id': 5,
+            'name': 'Kế hoạch Tùy chỉnh (Linh hoạt)',
+            'color': '#607D8B',
+            'description': 'Tự điều chỉnh theo từng kỳ học',
+            'credits_per_semester': 'Linh hoạt (10-22 TC)',
+            'total_semesters': '8-10 kỳ',
+            'advantages': ['Linh hoạt', 'Tùy chỉnh theo nhu cầu', 'Không ràng buộc'],
+            'suitable_for': 'Sinh viên muốn chủ động thời gian'
+        }
+    ]
+    
+    return render_template('study_plan.html', 
+                         student_id=session['student_id'],
+                         student_name=session.get('student_name'),
+                         plans=plans)
+
+@app.route('/download-recommendations')
+def download_recommendations():
+    """Download gợi ý môn học dạng text"""
+    if 'student_id' not in session:
+        return redirect(url_for('index'))
+    
+    student_id = session['student_id']
+    model_path = MODEL_PATH
+    
+    try:
+        recs = recommend_next_courses(student_id, model_path=model_path)
+        
+        # Tạo nội dung file text
+        from datetime import datetime
+        now = datetime.now().strftime('%d/%m/%Y %H:%M')
+        
+        content = f"""
+╔═══════════════════════════════════════════════════════════╗
+║  GỢI Ý MÔN HỌC CHO SINH VIÊN {student_id}              ║
+╚═══════════════════════════════════════════════════════════╝
+
+Sinh viên: {session.get('student_name', student_id)}
+Ngày tạo: {now}
+
+═══════════════════════════════════════════════════════════
+DANH SÁCH MÔN ĐƯỢC GỢI Ý ({len(recs)} môn)
+═══════════════════════════════════════════════════════════
+
+"""
+        
+        for i, rec in enumerate(recs, 1):
+            content += f"""
+{i}. {rec.get('CourseCode')} - {rec.get('CourseName')}
+   Tín chỉ: {rec.get('Credits')} TC
+   Năm/Kỳ: Năm {rec.get('recommended_year')} - HK{rec.get('recommended_semester')}
+   Lý do: {rec.get('recommendation_reason', 'Gợi ý dựa trên AI')}
+   ---
+"""
+        
+        content += f"""
+═══════════════════════════════════════════════════════════
+HỆ THỐNG GỢI Ý HỌC TẬP - CTU
+═══════════════════════════════════════════════════════════
+"""
+        
+        from flask import Response
+        return Response(
+            content,
+            mimetype='text/plain',
+            headers={'Content-Disposition': f'attachment;filename=GoiY_MonHoc_{student_id}.txt'}
+        )
+        
+    except Exception as e:
+        flash(f'Lỗi tải gợi ý: {e}', 'error')
+        return redirect(url_for('dashboard'))
+
 @app.route('/profile')
 def profile():
     if 'student_id' not in session:
