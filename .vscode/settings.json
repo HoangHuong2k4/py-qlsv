@@ -1,0 +1,22 @@
+{
+  // Disable HTML validation for Jinja2 templates
+  "html.validate.scripts": false,
+  "html.validate.styles": false,
+  "css.validate": false,
+  "javascript.validate.enable": false,
+  
+  // Configure file associations
+  "files.associations": {
+    "*.html": "jinja-html"
+  },
+  
+  // Exclude linter errors for template files
+  "[jinja-html]": {
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": false,
+      "strings": true
+    }
+  }
+}
+
