@@ -6,6 +6,7 @@
   <title>5 Kế Hoạch Học Tập - CTU</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <!-- Header Banner -->
@@ -25,47 +26,118 @@
   <div class="container">
     <h1 style="color: #1f5ca9; margin-bottom: 0.5rem;">📚 5 Kế Hoạch Học Tập</h1>
     <p style="color: #666; margin-bottom: 2rem;">
-      <em>Chọn kế hoạch phù hợp với mục tiêu và phong cách học tập của bạn</em>
+      <em>{% if is_new_student %}Kế hoạch đầy đủ từ HK1 năm 1 đến HK1 năm 5{% else %}Gợi ý học phần tiếp theo để đủ 156 tín chỉ{% endif %}</em>
     </p>
     
     {% for plan in plans %}
-    <section class="card" style="border-left: 4px solid {{ plan.color }}; margin-bottom: 1.5rem;">
-      <div style="border-bottom: 2px solid {{ plan.color }}; padding-bottom: 1rem; margin-bottom: 1rem;">
-        <h2 style="color: {{ plan.color }}; margin: 0;">{{ plan.name }}</h2>
-        <p style="color: #666; margin-top: 0.5rem;">{{ plan.description }}</p>
-      </div>
-      
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-        <div>
-          <strong>📊 TC/học kỳ:</strong>
-          <p style="margin: 0.25rem 0; color: {{ plan.color }}; font-size: 1.1em; font-weight: bold;">{{ plan.credits_per_semester }}</p>
+    <section class="card" style="border-left: 4px solid {{ plan.color }}; margin-bottom: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+        <div style="flex: 1;">
+          <h2 style="color: {{ plan.color }}; margin: 0;">{{ plan.name }}</h2>
+          <p style="color: #666; margin-top: 0.5rem;">{{ plan.description }}</p>
+          {% if distances %}
+          <p style="color: #888; font-size: 0.9em; margin-top: 0.5rem;">
+            📏 Khoảng cách đến cluster: {{ "%.2f"|format(plan.distance) }}
+          </p>
+          {% endif %}
         </div>
+        <a href="{{ url_for('download_plan_pdf', cluster_id=plan.cluster_id) }}" 
+           class="btn" 
+           style="background: {{ plan.color }}; margin-left: 1rem;">
+          📥 Tải PDF
+        </a>
+      </div>
+      
+      <!-- Thông tin tổng quan -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: #f5f5f5; border-radius: 8px;">
         <div>
-          <strong>⏱️ Tổng số kỳ:</strong>
-          <p style="margin: 0.25rem 0; color: {{ plan.color }}; font-size: 1.1em; font-weight: bold;">{{ plan.total_semesters }}</p>
+          <strong>Tổng tín chỉ:</strong><br>
+          <span style="font-size: 1.3em; color: {{ plan.color }}; font-weight: bold;">
+            {{ plan.total_credits }} / {{ plan.target_credits }} TC
+          </span>
         </div>
+        {% if plan.avg_credits_per_semester %}
+        <div>
+          <strong>TB tín chỉ/kỳ:</strong><br>
+          <span style="font-size: 1.3em; color: {{ plan.color }}; font-weight: bold;">
+            {{ plan.avg_credits_per_semester }} TC
+          </span>
+        </div>
+        {% endif %}
+        {% if plan.recommended_credits %}
+        <div>
+          <strong>Đề xuất thêm:</strong><br>
+          <span style="font-size: 1.3em; color: {{ plan.color }}; font-weight: bold;">
+            {{ plan.recommended_credits }} TC
+          </span>
+        </div>
+        {% endif %}
       </div>
       
-      <div style="margin-bottom: 1rem;">
-        <strong>✅ Ưu điểm:</strong>
-        <ul style="margin: 0.5rem 0; padding-left: 1.5rem; color: #333;">
-          {% for advantage in plan.advantages %}
-          <li style="margin: 0.25rem 0;">{{ advantage }}</li>
-          {% endfor %}
-        </ul>
+      <!-- Biểu đồ tín chỉ theo học kỳ -->
+      {% if plan.semesters %}
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="color: {{ plan.color }}; margin-bottom: 1rem;">📊 Biểu đồ tín chỉ theo học kỳ</h3>
+        <canvas id="chart_{{ plan.cluster_id }}" style="max-height: 300px;"></canvas>
       </div>
+      {% endif %}
       
-      <div style="background-color: #f5f5f5; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-        <strong>👥 Phù hợp cho:</strong>
-        <p style="margin: 0.5rem 0 0 0; color: #555;">{{ plan.suitable_for }}</p>
+      <!-- Chi tiết từng học kỳ -->
+      {% if plan.semesters %}
+      <div style="margin-top: 1.5rem;">
+        <h3 style="color: {{ plan.color }}; margin-bottom: 1rem;">📚 Chi tiết môn học theo học kỳ</h3>
+        
+        {% for key, semester_data in plan.semesters|dictsort %}
+          {% set year = semester_data.year %}
+          {% set semester = semester_data.semester %}
+          {% set courses = semester_data.courses %}
+          {% set semester_credits = courses|sum(attribute='Credits') if courses|sum(attribute='Credits') else 0 %}
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #fafafa; border-radius: 8px; border-left: 3px solid {{ plan.color }};">
+          <h4 style="color: {{ plan.color }}; margin: 0 0 0.5rem 0;">
+            Năm {{ year }} - Học kỳ {{ semester }}
+            <span style="font-size: 0.8em; color: #666; font-weight: normal;">
+              ({{ semester_credits }} TC)
+            </span>
+          </h4>
+          
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: {{ plan.color }}; color: white;">
+                <th style="padding: 0.5rem; text-align: left;">Mã môn</th>
+                <th style="padding: 0.5rem; text-align: left;">Tên môn học</th>
+                <th style="padding: 0.5rem; text-align: center;">Tín chỉ</th>
+                {% if not is_new_student %}
+                <th style="padding: 0.5rem; text-align: center;">Điểm</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for course in courses %}
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 0.5rem;"><strong>{{ course.CourseCode }}</strong></td>
+                <td style="padding: 0.5rem;">{{ course.CourseName }}</td>
+                <td style="padding: 0.5rem; text-align: center;">{{ course.Credits or 0 }}</td>
+                {% if not is_new_student %}
+                <td style="padding: 0.5rem; text-align: center;">{{ course.Score or '-' }}</td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
       </div>
+      {% else %}
+      <p style="color: #999; font-style: italic;">Chưa có dữ liệu kế hoạch cho cluster này.</p>
+      {% endif %}
     </section>
     {% endfor %}
     
     <section class="card" style="background-color: #fff3cd; border-left: 4px solid #FF9800;">
       <h3 style="color: #FF9800; margin-top: 0;"><i class="fas fa-lightbulb"></i> Lưu ý quan trọng</h3>
       <ul style="margin: 0; padding-left: 1.5rem; color: #333;">
-        <li style="margin: 0.5rem 0;">Các kế hoạch trên chỉ mang tính chất tham khảo</li>
+        <li style="margin: 0.5rem 0;">Các kế hoạch trên được tạo dựa trên K-Means Clustering (5 nhóm sinh viên)</li>
+        <li style="margin: 0.5rem 0;">Kế hoạch được sắp xếp theo khoảng cách gần nhất đến mô hình học tập của bạn</li>
         <li style="margin: 0.5rem 0;">Bạn có thể điều chỉnh linh hoạt theo tình hình thực tế</li>
         <li style="margin: 0.5rem 0;">Tham khảo ý kiến cố vấn học tập trước khi quyết định</li>
         <li style="margin: 0.5rem 0;"><strong>Tổng tín chỉ tốt nghiệp: 156 TC</strong></li>
@@ -87,5 +159,72 @@
       <p>Điện thoại: (84-292) 3832663 - (84-292) 3838474; Fax: (84-292) 3838474; Email: dhct@ctu.edu.vn.</p>
     </div>
   </footer>
+  
+  <script>
+    // Tạo biểu đồ cho mỗi kế hoạch
+    {% for plan in plans %}
+    {% if plan.semesters %}
+    (function() {
+      const ctx = document.getElementById('chart_{{ plan.cluster_id }}');
+      if (!ctx) return;
+      
+      const semesterData = {};
+      const semesterLabels = [];
+      {% for key, semester_data in plan.semesters|dictsort %}
+        {% set year = semester_data.year %}
+        {% set semester = semester_data.semester %}
+        {% set courses = semester_data.courses %}
+        const chartKey = 'Năm {{ year }} HK{{ semester }}';
+        semesterLabels.push(chartKey);
+        {% set sem_credits = courses|sum(attribute='Credits') if courses|sum(attribute='Credits') else 0 %}
+        semesterData[chartKey] = {{ sem_credits }};
+      {% endfor %}
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: semesterLabels,
+          datasets: [{
+            label: 'Tín chỉ',
+            data: Object.values(semesterData),
+            backgroundColor: '{{ plan.color }}80',
+            borderColor: '{{ plan.color }}',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            title: {
+              display: true,
+              text: 'Phân bố tín chỉ theo học kỳ',
+              font: { size: 14, weight: 'bold' }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Số tín chỉ'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Học kỳ'
+              }
+            }
+          }
+        }
+      });
+    })();
+    {% endif %}
+    {% endfor %}
+  </script>
 </body>
 </html>

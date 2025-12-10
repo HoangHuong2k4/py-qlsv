@@ -5,6 +5,11 @@ import mysql.connector
 from config import DB_CONFIG
 from recommender.train_model import train_kmeans
 from recommender.recommend import recommend_next_courses
+from recommender.kmeans_clustering import (
+    get_learning_plans_for_student,
+    calculate_distance_to_clusters,
+    get_student_progress_by_semester
+)
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # cần thiết cho flash messages và session
@@ -205,68 +210,302 @@ def recommendations():
 
 @app.route('/study-plan')
 def study_plan():
-    """Hiển thị 5 kế hoạch học tập"""
+    """Hiển thị 5 kế hoạch học tập dựa trên K-Means clustering"""
     if 'student_id' not in session:
         return redirect(url_for('index'))
     
-    # 5 kế hoạch mẫu
-    plans = [
-        {
-            'id': 1,
-            'name': 'Kế hoạch Chuẩn (Ổn định)',
-            'color': '#4CAF50',
-            'description': 'Phù hợp cho sinh viên muốn học đều theo kỳ, không áp lực',
-            'credits_per_semester': '15-18 TC/kỳ',
-            'total_semesters': '9 kỳ',
-            'advantages': ['Áp lực thấp', 'Có thời gian cho hoạt động ngoại khóa', 'Dễ theo kịp'],
-            'suitable_for': 'Sinh viên thích học đều, không gấp gáp'
-        },
-        {
-            'id': 2,
-            'name': 'Kế hoạch Nhanh (Tốt nghiệp sớm)',
-            'color': '#FF9800',
-            'description': 'Học nhiều tín chỉ mỗi kỳ để tốt nghiệp sớm',
-            'credits_per_semester': '20-22 TC/kỳ',
-            'total_semesters': '7-8 kỳ',
-            'advantages': ['Tốt nghiệp sớm', 'Tiết kiệm thời gian', 'Nhanh vào nghề'],
-            'suitable_for': 'Sinh viên có nền tảng tốt, học lực khá giỏi'
-        },
-        {
-            'id': 3,
-            'name': 'Kế hoạch Vừa phải (Cân bằng)',
-            'color': '#2196F3',
-            'description': 'Cân bằng giữa học tập và cuộc sống',
-            'credits_per_semester': '17-19 TC/kỳ',
-            'total_semesters': '8-9 kỳ',
-            'advantages': ['Vừa sức', 'Cân bằng thời gian', 'Không quá áp lực'],
-            'suitable_for': 'Phần lớn sinh viên'
-        },
-        {
-            'id': 4,
-            'name': 'Kế hoạch Chậm (Tích lũy từ từ)',
-            'color': '#9C27B0',
-            'description': 'Học ít TC mỗi kỳ, tập trung chất lượng',
-            'credits_per_semester': '12-15 TC/kỳ',
-            'total_semesters': '10-11 kỳ',
-            'advantages': ['Học kỹ từng môn', 'Áp lực rất thấp', 'Điểm số cao'],
-            'suitable_for': 'Sinh viên đi làm thêm, có việc gia đình'
-        },
-        {
-            'id': 5,
-            'name': 'Kế hoạch Tùy chỉnh (Linh hoạt)',
-            'color': '#607D8B',
-            'description': 'Tự điều chỉnh theo từng kỳ học',
-            'credits_per_semester': 'Linh hoạt (10-22 TC)',
-            'total_semesters': '8-10 kỳ',
-            'advantages': ['Linh hoạt', 'Tùy chỉnh theo nhu cầu', 'Không ràng buộc'],
-            'suitable_for': 'Sinh viên muốn chủ động thời gian'
-        }
-    ]
+    student_id = session['student_id']
     
-    return render_template('study_plan.html', 
-                         student_id=session['student_id'],
-                         student_name=session.get('student_name'),
-                         plans=plans)
+    try:
+        # Kiểm tra sinh viên mới (B22) hay cũ (B21)
+        is_new_student = student_id.startswith('B22')
+        
+        # Lấy tiến trình hiện tại
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT COUNT(*) as count FROM TienTrinh WHERE StudentID = %s", (student_id,))
+        progress_count = cursor.fetchone()['count']
+        conn.close()
+        
+        # Nếu là sinh viên mới hoặc chưa có tiến trình
+        if is_new_student or progress_count == 0:
+            # Hiển thị 5 kế hoạch đầy đủ từ HK1 Y1 đến HK1 Y5
+            plans_data = get_learning_plans_for_student(student_id)
+            
+            # Tạo metadata cho 5 kế hoạch
+            plan_names = [
+                'Kế hoạch Chuẩn (Ổn định)',
+                'Kế hoạch Nhanh (Tốt nghiệp sớm)',
+                'Kế hoạch Vừa phải (Cân bằng)',
+                'Kế hoạch Chậm (Tích lũy từ từ)',
+                'Kế hoạch Tùy chỉnh (Linh hoạt)'
+            ]
+            plan_colors = ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#607D8B']
+            plan_descriptions = [
+                'Phù hợp cho sinh viên muốn học đều theo kỳ, không áp lực',
+                'Học nhiều tín chỉ mỗi kỳ để tốt nghiệp sớm',
+                'Cân bằng giữa học tập và cuộc sống',
+                'Học ít TC mỗi kỳ, tập trung chất lượng',
+                'Tự điều chỉnh theo từng kỳ học'
+            ]
+            
+            plans = []
+            for i, plan_data in enumerate(plans_data):
+                # Tính số tín chỉ trung bình mỗi kỳ
+                semesters_raw = plan_data.get('semesters', {})
+                # Convert tuple keys thành string keys cho Jinja2
+                semesters = {f"{year}_{semester}": {'year': year, 'semester': semester, 'courses': courses}
+                            for (year, semester), courses in semesters_raw.items()}
+                total_credits = plan_data.get('total_credits', 0)
+                num_semesters = len(semesters) if semesters else 1
+                avg_credits = total_credits / num_semesters if num_semesters > 0 else 0
+                
+                plans.append({
+                    'cluster_id': plan_data.get('cluster_id', i),
+                    'name': plan_names[i],
+                    'color': plan_colors[i],
+                    'description': plan_descriptions[i],
+                    'distance': plan_data.get('distance', 999.0),
+                    'semesters': semesters,
+                    'total_credits': total_credits,
+                    'target_credits': 156,
+                    'avg_credits_per_semester': round(avg_credits, 1),
+                    'num_semesters': num_semesters,
+                    'top_student_id': plan_data.get('top_student_id')
+                })
+        else:
+            # Sinh viên cũ: gợi ý tiếp theo để đủ 156 TC
+            plans_data = get_learning_plans_for_student(student_id)
+            
+            # Lấy tiến trình hiện tại
+            current_progress = get_student_progress_by_semester(student_id)
+            current_total_credits = sum(
+                sum(c.get('Credits', 0) or 0 for c in courses)
+                for courses in current_progress.values()
+            )
+            
+            plan_names = [
+                'Kế hoạch Chuẩn (Ổn định)',
+                'Kế hoạch Nhanh (Tốt nghiệp sớm)',
+                'Kế hoạch Vừa phải (Cân bằng)',
+                'Kế hoạch Chậm (Tích lũy từ từ)',
+                'Kế hoạch Tùy chỉnh (Linh hoạt)'
+            ]
+            plan_colors = ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#607D8B']
+            
+            plans = []
+            for i, plan_data in enumerate(plans_data):
+                # Lọc các môn chưa học từ kế hoạch
+                semesters_raw = plan_data.get('semesters', {})
+                recommended_semesters_raw = {}
+                
+                # Tìm học kỳ tiếp theo
+                if current_progress:
+                    max_year = max(y for y, s in current_progress.keys())
+                    max_semester = max(s for y, s in current_progress.keys() if y == max_year)
+                    
+                    # Lọc các học kỳ từ học kỳ tiếp theo trở đi
+                    for (year, semester), courses in semesters_raw.items():
+                        if year > max_year or (year == max_year and semester > max_semester):
+                            # Lọc các môn chưa học
+                            current_courses = set()
+                            for cs in current_progress.values():
+                                current_courses.update(c.get('CourseCode') for c in cs)
+                            
+                            recommended_courses = [
+                                c for c in courses
+                                if c.get('CourseCode') not in current_courses
+                            ]
+                            
+                            if recommended_courses:
+                                recommended_semesters_raw[(year, semester)] = recommended_courses
+                
+                # Convert tuple keys thành string keys cho Jinja2
+                recommended_semesters = {f"{year}_{semester}": {'year': year, 'semester': semester, 'courses': courses}
+                                        for (year, semester), courses in recommended_semesters_raw.items()}
+                
+                recommended_total = sum(
+                    sum(c.get('Credits', 0) or 0 for c in courses)
+                    for courses in recommended_semesters_raw.values()
+                )
+                
+                plans.append({
+                    'cluster_id': plan_data.get('cluster_id', i),
+                    'name': plan_names[i],
+                    'color': plan_colors[i],
+                    'description': f'Gợi ý tiếp theo để đủ 156 TC (hiện tại: {current_total_credits} TC)',
+                    'distance': plan_data.get('distance', 999.0),
+                    'semesters': recommended_semesters,
+                    'current_credits': current_total_credits,
+                    'recommended_credits': recommended_total,
+                    'total_credits': current_total_credits + recommended_total,
+                    'target_credits': 156,
+                    'top_student_id': plan_data.get('top_student_id')
+                })
+        
+        # Tính khoảng cách đến các cluster
+        distances = calculate_distance_to_clusters(student_id)
+        
+        return render_template('study_plan.html', 
+                             student_id=student_id,
+                             student_name=session.get('student_name'),
+                             plans=plans,
+                             distances=distances,
+                             is_new_student=is_new_student)
+        
+    except Exception as e:
+        print(f"Error in study_plan: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Có lỗi xảy ra khi tải kế hoạch học tập', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/download-plan-pdf/<int:cluster_id>')
+def download_plan_pdf(cluster_id):
+    """Download kế hoạch học tập dạng PDF"""
+    if 'student_id' not in session:
+        return redirect(url_for('index'))
+    
+    student_id = session['student_id']
+    
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import cm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from io import BytesIO
+        from flask import Response
+        
+        # Lấy kế hoạch học tập
+        plans_data = get_learning_plans_for_student(student_id)
+        
+        if cluster_id >= len(plans_data):
+            flash('Không tìm thấy kế hoạch', 'error')
+            return redirect(url_for('study_plan'))
+        
+        plan_data = plans_data[cluster_id]
+        semesters_raw = plan_data.get('semesters', {})
+        
+        # Convert về dạng tuple keys nếu là string keys
+        semesters = {}
+        for key, value in semesters_raw.items():
+            if isinstance(key, tuple):
+                semesters[key] = value if isinstance(value, list) else value.get('courses', [])
+            elif isinstance(key, str) and '_' in key:
+                # String key format: "year_semester"
+                parts = key.split('_')
+                if len(parts) == 2:
+                    year, semester = int(parts[0]), int(parts[1])
+                    courses = value if isinstance(value, list) else value.get('courses', [])
+                    semesters[(year, semester)] = courses
+        
+        # Tạo PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, 
+                                rightMargin=2*cm, leftMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            textColor=colors.HexColor('#1f5ca9'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        # Nội dung PDF
+        story = []
+        
+        # Tiêu đề
+        plan_names = [
+            'Kế hoạch Chuẩn (Ổn định)',
+            'Kế hoạch Nhanh (Tốt nghiệp sớm)',
+            'Kế hoạch Vừa phải (Cân bằng)',
+            'Kế hoạch Chậm (Tích lũy từ từ)',
+            'Kế hoạch Tùy chỉnh (Linh hoạt)'
+        ]
+        
+        title = Paragraph(f"KẾ HOẠCH HỌC TẬP - {plan_names[cluster_id]}", title_style)
+        story.append(title)
+        story.append(Spacer(1, 0.5*cm))
+        
+        # Thông tin sinh viên
+        info_text = f"""
+        <b>Sinh viên:</b> {session.get('student_name', student_id)} ({student_id})<br/>
+        <b>Ngày tạo:</b> {__import__('datetime').datetime.now().strftime('%d/%m/%Y %H:%M')}<br/>
+        <b>Tổng tín chỉ:</b> {plan_data.get('total_credits', 0)} / 156 TC
+        """
+        info_para = Paragraph(info_text, styles['Normal'])
+        story.append(info_para)
+        story.append(Spacer(1, 1*cm))
+        
+        # Bảng môn học theo học kỳ
+        for (year, semester), courses in sorted(semesters.items()):
+            semester_title = Paragraph(
+                f"<b>Năm {year} - Học kỳ {semester}</b>",
+                styles['Heading2']
+            )
+            story.append(semester_title)
+            story.append(Spacer(1, 0.3*cm))
+            
+            # Tạo bảng
+            table_data = [['STT', 'Mã môn', 'Tên môn học', 'Tín chỉ', 'Điểm']]
+            
+            for idx, course in enumerate(courses, 1):
+                table_data.append([
+                    str(idx),
+                    course.get('CourseCode', ''),
+                    course.get('CourseName', ''),
+                    str(course.get('Credits', 0) or 0),
+                    str(course.get('Score', '-') or '-')
+                ])
+            
+            # Tính tổng tín chỉ học kỳ
+            semester_credits = sum(c.get('Credits', 0) or 0 for c in courses)
+            table_data.append(['', '', '<b>Tổng</b>', f'<b>{semester_credits}</b>', ''])
+            
+            table = Table(table_data, colWidths=[1*cm, 2*cm, 8*cm, 2*cm, 2*cm])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f5ca9')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            
+            story.append(table)
+            story.append(Spacer(1, 0.5*cm))
+        
+        # Build PDF
+        doc.build(story)
+        buffer.seek(0)
+        
+        # Trả về PDF
+        return Response(
+            buffer.getvalue(),
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment;filename=KeHoach_Nhom{cluster_id}_{student_id}.pdf'
+            }
+        )
+        
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Lỗi tạo PDF: {e}', 'error')
+        return redirect(url_for('study_plan'))
 
 @app.route('/download-recommendations')
 def download_recommendations():

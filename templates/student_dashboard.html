@@ -19,6 +19,9 @@
       <a href="/study-plan" class="nav-tab">Kế hoạch học tập</a>
       <a href="/dashboard" class="nav-tab active">Gợi ý môn học</a>
       <a href="/profile" class="nav-tab">Thông tin cá nhân</a>
+      <span class="nav-tab" style="margin-left: auto; color: #1f5ca9; font-weight: bold; cursor: default;">
+        Học phần của {{ student_name }} ({{ student_id }})
+      </span>
       <a href="/logout" class="nav-tab logout-tab">Đăng xuất</a>
     </div>
   </div>
@@ -26,7 +29,7 @@
   <!-- Main Content -->
   <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-      <h1 style="margin: 0;">Học phần của {{ student_id }}</h1>
+      <h1 style="margin: 0;">Dashboard</h1>
       <a href="{{ url_for('study_plan') }}" class="btn" style="background: #2196F3;">
         📚 Xem 5 Kế Hoạch Học Tập
       </a>
@@ -87,173 +90,43 @@
       {% endif %}
     </section>
 
-    {# Tách thành các nhóm #}
-    {% if recs %}
-      {% set thesis_recs = [] %}
-      {% set additional_recs = [] %}
-      {% set other_recs = [] %}
-      {% for r in recs %}
-        {% if (r.get('CourseCode') == 'CT555') and (r.get('recommended_year') == 5) and (r.get('recommended_semester') == 1) %}
-          {% if thesis_recs.append(r) %}{% endif %}
-        {% elif (r.get('recommended_year') == 5) and (r.get('recommended_semester') == 1) and (r.get('CourseCode') != 'CT555') %}
-          {% if additional_recs.append(r) %}{% endif %}
-        {% else %}
-          {% if other_recs.append(r) %}{% endif %}
-        {% endif %}
-      {% endfor %}
-    {% else %}
-      {% set thesis_recs = [] %}
-      {% set additional_recs = [] %}
-      {% set other_recs = [] %}
-    {% endif %}
-
-    {% if thesis_recs %}
-    <section class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h2 style="margin: 0;">🎓 Gợi ý luận văn tốt nghiệp (Học kỳ 1 năm 5)</h2>
-        <a href="{{ url_for('download_recommendations') }}" class="btn" style="background: #4CAF50;">
-          📥 Tải gợi ý
+    <!-- 5 Kế hoạch học tập -->
+    <section class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-top: 2rem;">
+      <h2 style="color: white; margin: 0 0 1rem 0;">🎯 5 Kế Hoạch Học Tập Được Gợi Ý</h2>
+      <p style="color: rgba(255,255,255,0.9); margin-bottom: 1.5rem;">
+        Hệ thống đã phân tích mô hình học tập của bạn và đề xuất 5 kế hoạch học tập phù hợp dựa trên K-Means Clustering.
+        Mỗi kế hoạch được tạo từ sinh viên trội nhất của 5 nhóm khác nhau.
+      </p>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2em; margin-bottom: 0.5rem;">📚</div>
+          <strong>5 Kế hoạch</strong>
+          <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">Dựa trên 5 clusters</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2em; margin-bottom: 0.5rem;">🎯</div>
+          <strong>156 TC</strong>
+          <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">Mục tiêu tốt nghiệp</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2em; margin-bottom: 0.5rem;">📊</div>
+          <strong>Biểu đồ</strong>
+          <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">Tín chỉ theo kỳ</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2em; margin-bottom: 0.5rem;">📥</div>
+          <strong>Download PDF</strong>
+          <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">Cho từng kế hoạch</p>
+        </div>
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="{{ url_for('study_plan') }}" class="btn" style="background: white; color: #667eea; padding: 1rem 2rem; font-size: 1.1em; font-weight: bold;">
+          📚 Xem Chi Tiết 5 Kế Hoạch Học Tập →
         </a>
       </div>
-      <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
-        <em>Gợi ý cho sinh viên đã gần đủ 156 tín chỉ - chỉ cần thêm luận văn tốt nghiệp</em>
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Mã môn</th>
-            <th>Tên môn học</th>
-            <th>Tín chỉ</th>
-            <th>Năm học</th>
-            <th>Học kỳ</th>
-            <th>Điểm TB</th>
-            <th>Tỷ lệ đậu</th>
-            <th>Lý do gợi ý</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in thesis_recs %}
-          <tr>
-            <td><strong>{{ r.CourseCode }}</strong></td>
-            <td>{{ r.CourseName }}</td>
-            <td>{{ r.Credits }}</td>
-            <td><strong>Năm {{ r.recommended_year }}</strong></td>
-            <td><strong>HK{{ r.recommended_semester }}</strong></td>
-            <td>
-              {% if r.avg_score %}
-                {{ "%.2f"|format(r.avg_score) }}
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td>
-              {% if r.pass_rate %}
-                {{ "%.1f"|format(r.pass_rate) }}%
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td style="font-size: 0.9em; color: #555;">
-              {% if r.recommendation_reason %}
-                {{ r.recommendation_reason }}
-              {% else %}
-                Gợi ý dựa trên sinh viên tương tự
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
     </section>
-    {% endif %}
-
-    {% if additional_recs %}
-    <section class="card">
-      <h2>📚 Gợi ý các môn bổ sung (Học kỳ 1 năm 5)</h2>
-      <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
-        <em>Phần này đã được chuyển sang trang riêng.</em>
-      </p>
-      <p>
-        <a class="button" href="/recommendations/hk1-nam5">Xem các môn bổ sung cho HK1 Năm 5 →</a>
-      </p>
-    </section>
-    {% endif %}
-
-    {% if other_recs %}
-    <section class="card">
-      <h2>📖 Gợi ý học phần tiếp theo</h2>
-      <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
-        <em>Gợi ý dựa trên lịch sử học tập của các sinh viên đã tốt nghiệp đúng hạn</em>
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Mã môn</th>
-            <th>Tên môn học</th>
-            <th>Tín chỉ</th>
-            <th>Năm học</th>
-            <th>Học kỳ</th>
-            <th>Điểm TB</th>
-            <th>Tỷ lệ đậu</th>
-            <th>Lý do gợi ý</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in other_recs %}
-          <tr>
-            <td><strong>{{ r.CourseCode }}</strong></td>
-            <td>{{ r.CourseName }}</td>
-            <td>{{ r.Credits }}</td>
-            <td>
-              {% if r.recommended_year %}
-                <strong>Năm {{ r.recommended_year }}</strong>
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td>
-              {% if r.recommended_semester %}
-                <strong>HK{{ r.recommended_semester }}</strong>
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td>
-              {% if r.avg_score %}
-                {{ "%.2f"|format(r.avg_score) }}
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td>
-              {% if r.pass_rate %}
-                {{ "%.1f"|format(r.pass_rate) }}%
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td style="font-size: 0.9em; color: #555;">
-              {% if r.recommendation_reason %}
-                {{ r.recommendation_reason }}
-              {% elif r.frequency %}
-                Được học bởi {{ r.frequency }} sinh viên tốt nghiệp đúng hạn tương tự
-              {% else %}
-                Gợi ý dựa trên sinh viên tương tự
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </section>
-    {% endif %}
-
-    {% if not recs or (not thesis_recs and not additional_recs and not other_recs) %}
-    <section class="card">
-      <h2>Gợi ý học phần tiếp theo</h2>
-      <p class="muted">Không có gợi ý nào cho kỳ tiếp theo hoặc chưa đủ dữ liệu.</p>
-    </section>
-    {% endif %}
   </div>
 
   <!-- Footer -->
