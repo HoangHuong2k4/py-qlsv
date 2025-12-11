@@ -419,6 +419,72 @@ def download_plan_pdf(cluster_id):
         from reportlab.lib.enums import TA_CENTER, TA_LEFT
         from io import BytesIO
         from flask import Response
+        import os
+        import platform
+        
+        # Đăng ký font tiếng Việt
+        font_registered = False
+        vietnamese_font_name = 'VietnameseFont'
+        
+        # Tìm font hỗ trợ tiếng Việt trên hệ thống
+        font_paths = []
+        
+        if platform.system() == 'Darwin':  # macOS
+            font_paths = [
+                '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
+                '/Library/Fonts/Arial Unicode.ttf',
+                '/System/Library/Fonts/Helvetica.ttc',
+                '/System/Library/Fonts/STHeiti Light.ttc',
+                '/System/Library/Fonts/STHeiti Medium.ttc',
+            ]
+        elif platform.system() == 'Windows':
+            font_paths = [
+                'C:/Windows/Fonts/arial.ttf',
+                'C:/Windows/Fonts/arialuni.ttf',
+                'C:/Windows/Fonts/times.ttf',
+                'C:/Windows/Fonts/timesi.ttf',
+            ]
+        else:  # Linux
+            font_paths = [
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+                '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+                '/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
+            ]
+        
+        # Thử đăng ký font
+        for font_path in font_paths:
+            if os.path.exists(font_path):
+                try:
+                    # Xử lý file .ttc (TrueType Collection) trên macOS
+                    if font_path.endswith('.ttc'):
+                        # TTFont có thể xử lý TTC nhưng cần chỉ định index
+                        pdfmetrics.registerFont(TTFont(vietnamese_font_name, font_path, subfontIndex=0))
+                    else:
+                        pdfmetrics.registerFont(TTFont(vietnamese_font_name, font_path))
+                    font_registered = True
+                    print(f"✅ Đã đăng ký font: {font_path}")
+                    break
+                except Exception as e:
+                    print(f"⚠️ Không thể đăng ký font {font_path}: {e}")
+                    continue
+        
+        # Nếu không tìm thấy font hệ thống, thử dùng DejaVu Sans từ reportlab
+        if not font_registered:
+            try:
+                from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+                # Thử dùng font CJK (hỗ trợ Unicode tốt hơn)
+                pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
+                vietnamese_font_name = 'STSong-Light'
+                font_registered = True
+                print("✅ Đã đăng ký font CJK")
+            except:
+                pass
+        
+        # Fallback cuối cùng: dùng Helvetica (có thể không hiển thị đúng tiếng Việt)
+        if not font_registered:
+            print("⚠️ Không tìm thấy font tiếng Việt, sử dụng Helvetica (có thể không hiển thị đúng)")
+            vietnamese_font_name = 'Helvetica'
+            font_registered = False  # Đánh dấu không có font Unicode
         
         # Lấy kế hoạch học tập
         plans_data = get_learning_plans_for_student(student_id)
@@ -449,15 +515,32 @@ def download_plan_pdf(cluster_id):
                                 rightMargin=2*cm, leftMargin=2*cm,
                                 topMargin=2*cm, bottomMargin=2*cm)
         
-        # Styles
+        # Styles với font tiếng Việt
         styles = getSampleStyleSheet()
+        
+        # Tạo custom styles với font tiếng Việt
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
+            fontName=vietnamese_font_name,
             fontSize=18,
             textColor=colors.HexColor('#1f5ca9'),
             spaceAfter=30,
             alignment=TA_CENTER
+        )
+        
+        normal_style = ParagraphStyle(
+            'VietnameseNormal',
+            parent=styles['Normal'],
+            fontName=vietnamese_font_name,
+            fontSize=10
+        )
+        
+        heading2_style = ParagraphStyle(
+            'VietnameseHeading2',
+            parent=styles['Heading2'],
+            fontName=vietnamese_font_name,
+            fontSize=14
         )
         
         # Nội dung PDF
@@ -482,7 +565,7 @@ def download_plan_pdf(cluster_id):
         <b>Ngày tạo:</b> {__import__('datetime').datetime.now().strftime('%d/%m/%Y %H:%M')}<br/>
         <b>Tổng tín chỉ:</b> {plan_data.get('total_credits', 0)} / 156 TC
         """
-        info_para = Paragraph(info_text, styles['Normal'])
+        info_para = Paragraph(info_text, normal_style)
         story.append(info_para)
         story.append(Spacer(1, 1*cm))
         
@@ -490,39 +573,67 @@ def download_plan_pdf(cluster_id):
         for (year, semester), courses in sorted(semesters.items()):
             semester_title = Paragraph(
                 f"<b>Năm {year} - Học kỳ {semester}</b>",
-                styles['Heading2']
+                heading2_style
             )
             story.append(semester_title)
             story.append(Spacer(1, 0.3*cm))
             
-            # Tạo bảng
-            table_data = [['STT', 'Mã môn', 'Tên môn học', 'Tín chỉ', 'Điểm']]
+            # Tạo bảng với Paragraph để hỗ trợ font tiếng Việt
+            table_data = [[
+                Paragraph('STT', normal_style),
+                Paragraph('Mã môn', normal_style),
+                Paragraph('Tên môn học', normal_style),
+                Paragraph('Tín chỉ', normal_style),
+                Paragraph('Điểm', normal_style)
+            ]]
             
             for idx, course in enumerate(courses, 1):
+                course_name = course.get('CourseName', '') or ''
+                course_code = course.get('CourseCode', '') or ''
+                credits = str(course.get('Credits', 0) or 0)
+                score = str(course.get('Score', '-') or '-')
+                
                 table_data.append([
-                    str(idx),
-                    course.get('CourseCode', ''),
-                    course.get('CourseName', ''),
-                    str(course.get('Credits', 0) or 0),
-                    str(course.get('Score', '-') or '-')
+                    Paragraph(str(idx), normal_style),
+                    Paragraph(course_code, normal_style),
+                    Paragraph(course_name, normal_style),
+                    Paragraph(credits, normal_style),
+                    Paragraph(score, normal_style)
                 ])
             
             # Tính tổng tín chỉ học kỳ
             semester_credits = sum(c.get('Credits', 0) or 0 for c in courses)
-            table_data.append(['', '', '<b>Tổng</b>', f'<b>{semester_credits}</b>', ''])
+            table_data.append([
+                Paragraph('', normal_style),
+                Paragraph('', normal_style),
+                Paragraph('<b>Tổng</b>', normal_style),
+                Paragraph(f'<b>{semester_credits}</b>', normal_style),
+                Paragraph('', normal_style)
+            ])
             
             table = Table(table_data, colWidths=[1*cm, 2*cm, 8*cm, 2*cm, 2*cm])
-            table.setStyle(TableStyle([
+            
+            # Tạo style cho bảng với font tiếng Việt
+            table_style = [
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f5ca9')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 0), (-1, 0), vietnamese_font_name),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ]))
+            ]
+            
+            # Thêm font cho các dòng dữ liệu
+            if font_registered:
+                table_style.extend([
+                    ('FONTNAME', (0, 1), (-1, -1), vietnamese_font_name),
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ])
+            
+            table.setStyle(TableStyle(table_style))
             
             story.append(table)
             story.append(Spacer(1, 0.5*cm))
