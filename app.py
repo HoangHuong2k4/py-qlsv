@@ -253,9 +253,29 @@ def study_plan():
             for i, plan_data in enumerate(plans_data):
                 # Tính số tín chỉ trung bình mỗi kỳ
                 semesters_raw = plan_data.get('semesters', {})
-                # Convert tuple keys thành string keys cho Jinja2
-                semesters = {f"{year}_{semester}": {'year': year, 'semester': semester, 'courses': courses}
-                            for (year, semester), courses in semesters_raw.items()}
+                # Convert tuple keys thành string keys cho Jinja2 và tính tín chỉ mỗi kỳ
+                semesters = {}
+                chart_data = []  # Dữ liệu cho biểu đồ: [{'label': 'Năm 1 HK1', 'credits': 13}, ...]
+                
+                for (year, semester), courses in semesters_raw.items():
+                    # Tính tổng tín chỉ cho học kỳ này
+                    semester_credits = sum(c.get('Credits', 0) or 0 for c in courses)
+                    key = f"{year}_{semester}"
+                    semesters[key] = {
+                        'year': year,
+                        'semester': semester,
+                        'courses': courses,
+                        'credits': semester_credits
+                    }
+                    chart_data.append({
+                        'label': f'Năm {year} HK{semester}',
+                        'credits': semester_credits
+                    })
+                
+                # Sắp xếp chart_data theo năm và học kỳ
+                chart_data.sort(key=lambda x: (int(x['label'].split('Năm ')[1].split(' HK')[0]), 
+                                               int(x['label'].split('HK')[1])))
+                
                 total_credits = plan_data.get('total_credits', 0)
                 num_semesters = len(semesters) if semesters else 1
                 avg_credits = total_credits / num_semesters if num_semesters > 0 else 0
@@ -267,6 +287,7 @@ def study_plan():
                     'description': plan_descriptions[i],
                     'distance': plan_data.get('distance', 999.0),
                     'semesters': semesters,
+                    'chart_data': chart_data,  # Dữ liệu cho biểu đồ
                     'total_credits': total_credits,
                     'target_credits': 156,
                     'avg_credits_per_semester': round(avg_credits, 1),
@@ -320,9 +341,27 @@ def study_plan():
                             if recommended_courses:
                                 recommended_semesters_raw[(year, semester)] = recommended_courses
                 
-                # Convert tuple keys thành string keys cho Jinja2
-                recommended_semesters = {f"{year}_{semester}": {'year': year, 'semester': semester, 'courses': courses}
-                                        for (year, semester), courses in recommended_semesters_raw.items()}
+                # Convert tuple keys thành string keys cho Jinja2 và tính tín chỉ
+                recommended_semesters = {}
+                chart_data = []  # Dữ liệu cho biểu đồ
+                
+                for (year, semester), courses in recommended_semesters_raw.items():
+                    semester_credits = sum(c.get('Credits', 0) or 0 for c in courses)
+                    key = f"{year}_{semester}"
+                    recommended_semesters[key] = {
+                        'year': year,
+                        'semester': semester,
+                        'courses': courses,
+                        'credits': semester_credits
+                    }
+                    chart_data.append({
+                        'label': f'Năm {year} HK{semester}',
+                        'credits': semester_credits
+                    })
+                
+                # Sắp xếp chart_data
+                chart_data.sort(key=lambda x: (int(x['label'].split('Năm ')[1].split(' HK')[0]), 
+                                               int(x['label'].split('HK')[1])))
                 
                 recommended_total = sum(
                     sum(c.get('Credits', 0) or 0 for c in courses)
@@ -336,6 +375,7 @@ def study_plan():
                     'description': f'Gợi ý tiếp theo để đủ 156 TC (hiện tại: {current_total_credits} TC)',
                     'distance': plan_data.get('distance', 999.0),
                     'semesters': recommended_semesters,
+                    'chart_data': chart_data,  # Dữ liệu cho biểu đồ
                     'current_credits': current_total_credits,
                     'recommended_credits': recommended_total,
                     'total_credits': current_total_credits + recommended_total,

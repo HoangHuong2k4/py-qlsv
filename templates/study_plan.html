@@ -75,10 +75,12 @@
       </div>
       
       <!-- Biểu đồ tín chỉ theo học kỳ -->
-      {% if plan.semesters %}
+      {% if plan.chart_data and plan.chart_data|length > 0 %}
       <div style="margin-bottom: 1.5rem;">
         <h3 style="color: {{ plan.color }}; margin-bottom: 1rem;">📊 Biểu đồ tín chỉ theo học kỳ</h3>
-        <canvas id="chart_{{ plan.cluster_id }}" style="max-height: 300px;"></canvas>
+        <div style="position: relative; height: 300px;">
+          <canvas id="chart_{{ plan.cluster_id }}"></canvas>
+        </div>
       </div>
       {% endif %}
       
@@ -91,7 +93,7 @@
           {% set year = semester_data.year %}
           {% set semester = semester_data.semester %}
           {% set courses = semester_data.courses %}
-          {% set semester_credits = courses|sum(attribute='Credits') if courses|sum(attribute='Credits') else 0 %}
+          {% set semester_credits = semester_data.credits if semester_data.credits else 0 %}
         <div style="margin-bottom: 1.5rem; padding: 1rem; background: #fafafa; border-radius: 8px; border-left: 3px solid {{ plan.color }};">
           <h4 style="color: {{ plan.color }}; margin: 0 0 0.5rem 0;">
             Năm {{ year }} - Học kỳ {{ semester }}
@@ -163,30 +165,23 @@
   <script>
     // Tạo biểu đồ cho mỗi kế hoạch
     {% for plan in plans %}
-    {% if plan.semesters %}
+    {% if plan.chart_data and plan.chart_data|length > 0 %}
     (function() {
       const ctx = document.getElementById('chart_{{ plan.cluster_id }}');
       if (!ctx) return;
       
-      const semesterData = {};
-      const semesterLabels = [];
-      {% for key, semester_data in plan.semesters|dictsort %}
-        {% set year = semester_data.year %}
-        {% set semester = semester_data.semester %}
-        {% set courses = semester_data.courses %}
-        const chartKey = 'Năm {{ year }} HK{{ semester }}';
-        semesterLabels.push(chartKey);
-        {% set sem_credits = courses|sum(attribute='Credits') if courses|sum(attribute='Credits') else 0 %}
-        semesterData[chartKey] = {{ sem_credits }};
-      {% endfor %}
+      // Dữ liệu từ backend
+      const chartData = {{ plan.chart_data|tojson }};
+      const labels = chartData.map(item => item.label);
+      const credits = chartData.map(item => item.credits);
       
       new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: semesterLabels,
+          labels: labels,
           datasets: [{
             label: 'Tín chỉ',
-            data: Object.values(semesterData),
+            data: credits,
             backgroundColor: '{{ plan.color }}80',
             borderColor: '{{ plan.color }}',
             borderWidth: 2
@@ -194,7 +189,7 @@
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               display: false
@@ -203,6 +198,13 @@
               display: true,
               text: 'Phân bố tín chỉ theo học kỳ',
               font: { size: 14, weight: 'bold' }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'Tín chỉ: ' + context.parsed.y + ' TC';
+                }
+              }
             }
           },
           scales: {
@@ -210,13 +212,20 @@
               beginAtZero: true,
               title: {
                 display: true,
-                text: 'Số tín chỉ'
+                text: 'Số tín chỉ (TC)'
+              },
+              ticks: {
+                stepSize: 5
               }
             },
             x: {
               title: {
                 display: true,
                 text: 'Học kỳ'
+              },
+              ticks: {
+                maxRotation: 45,
+                minRotation: 45
               }
             }
           }
