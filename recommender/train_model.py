@@ -17,13 +17,14 @@ def get_all_courses():
     return courses
 
 
-def train_kmeans(excel_path, out_model='models/kmeans_model.pkl'):
+def train_kmeans(excel_path, out_model='models/kmeans_model.pkl', use_graduated_only=True):
     """
     Train K-Means với 5 clusters dựa trên feature vector 53 chiều (mỗi chiều = số tín chỉ đạt được cho mỗi môn).
     
     Args:
         excel_path: Đường dẫn đến file Excel chứa dữ liệu sinh viên
         out_model: Đường dẫn để lưu model
+        use_graduated_only: Nếu True, chỉ train với sinh viên tốt nghiệp (đã học CT555 với điểm >= 5.0)
         
     Returns:
         Đường dẫn đến model đã lưu
@@ -33,15 +34,34 @@ def train_kmeans(excel_path, out_model='models/kmeans_model.pkl'):
     df = df.dropna(subset=['StudentID'])
     df['StudentID'] = df['StudentID'].astype(str).str.strip()
     
+    # Nếu chỉ dùng sinh viên tốt nghiệp, lọc dữ liệu
+    if use_graduated_only:
+        # Lấy danh sách sinh viên đã tốt nghiệp (có CT555 với điểm >= 5.0)
+        graduated_students = df[
+            (df['CourseCode'] == 'CT555') & 
+            (df['Score'] >= 5.0)
+        ]['StudentID'].unique()
+        
+        print(f"📊 Chế độ: Chỉ train với sinh viên tốt nghiệp")
+        print(f"📚 Tìm thấy {len(graduated_students)} sinh viên tốt nghiệp")
+        
+        # Chỉ giữ lại dữ liệu của sinh viên tốt nghiệp
+        df = df[df['StudentID'].isin(graduated_students)]
+    else:
+        print(f"📊 Chế độ: Train với tất cả sinh viên")
+    
     # Lấy danh sách tất cả môn học
     all_courses = get_all_courses()
-    print(f"Tìm thấy {len(all_courses)} môn học")
+    print(f"📖 Tìm thấy {len(all_courses)} môn học")
     
     # Tạo feature matrix: mỗi hàng là một sinh viên, mỗi cột là một môn học
     feature_matrix = []
     student_ids = []
     
-    for student_id in df['StudentID'].unique():
+    unique_students = df['StudentID'].unique()
+    print(f"👥 Số sinh viên sẽ train: {len(unique_students)}")
+    
+    for student_id in unique_students:
         student_data = df[df['StudentID'] == student_id]
         
         # Tạo feature vector: số tín chỉ đạt được cho mỗi môn

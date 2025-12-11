@@ -64,7 +64,9 @@ Mật khẩu: B2200001
 # 3. Xem Dashboard
 → Thấy tiến độ: 52/156 TC
 → Thấy lịch sử: 20 môn
-→ Thấy gợi ý: 4-5 môn (ML019, KL001, CT177, CT178, TN002)
+→ Thấy "5 Kế Hoạch Học Tập" với biểu đồ tín chỉ
+→ Click "Xem Chi Tiết" để xem 5 kế hoạch đầy đủ
+→ Mỗi kế hoạch có nút "📥 Tải PDF"
 ```
 
 ---
@@ -102,21 +104,25 @@ README.md                ← File này
 ## 📊 Database Structure
 
 ```
-SinhVien (103 sinh viên)
-├── StudentID, HoTen, Password
-└── Email, GioiTinh, NgaySinh
+SinhVien (107 sinh viên)
+├── StudentID, Status (Đang học/Tốt nghiệp/Nghỉ học) ← MỚI
+├── HoTen, Password, Email
+└── GioiTinh, NgaySinh, Lop, Nganh, Khoa
+   - 92 sinh viên tốt nghiệp (dùng cho training K-Means)
+   - 15 sinh viên đang học (dùng để đăng nhập)
 
-MonHoc (51 môn)
+MonHoc (89 môn) ← ĐÃ UPDATE
 ├── CourseCode, CourseName, Credits
-└── Type (Bắt buộc/Tự chọn/...)
+└── Type (Bắt buộc/Tự chọn/Cơ sở/Chuyên ngành)
 
-TienTrinh (5,209 records)
+TienTrinh (5,200+ records)
 ├── StudentID, Year, Semester
-├── CourseCode, Score, GPA
-└── OnTime, Graduated, Status
+├── CourseCode, Score, GPA, Credits
+└── Status (Đã học/Đang học/Chưa học)
 
 TienQuyet (23 ràng buộc tiên quyết)
 HocKy (15 học kỳ: 5 năm × 3 kỳ)
+KeHoachHocTap (Kế hoạch học tập)
 ```
 
 ---
@@ -155,16 +161,41 @@ app.run(debug=True, port=5001)  # Đổi port tại đây
 ## ✅ Checklist
 
 - [ ] MySQL đã start (XAMPP)
-- [ ] Import QuanLyHocTap_Full.sql thành công
+- [ ] Import QuanLyHocTap_Full.sql thành công (987KB)
 - [ ] Cài pip3 install -r requirements.txt
+- [ ] (Tùy chọn) Train lại K-Means model:
+  ```bash
+  python3 -c "from recommender.train_model import train_kmeans; train_kmeans('data/student_data_100-2.xlsx', use_graduated_only=True)"
+  ```
 - [ ] Chạy python3 app.py
 - [ ] Truy cập http://localhost:5001
 - [ ] Đăng nhập B2200001/B2200001
-- [ ] Thấy gợi ý môn học trên Dashboard
+- [ ] Thấy 5 Kế hoạch học tập trên Dashboard
+- [ ] Xem biểu đồ tín chỉ trong mỗi kế hoạch
+- [ ] Test download PDF cho mỗi kế hoạch
+
+---
+
+## 🔧 SETUP NÂNG CAO
+
+### Train lại K-Means model (chỉ với sinh viên tốt nghiệp):
+```bash
+python3 -c "from recommender.train_model import train_kmeans; train_kmeans('data/student_data_100-2.xlsx', use_graduated_only=True)"
+```
+
+### Update database MonHoc từ MonHoc.sql:
+```bash
+python3 update_monhoc.py
+```
+
+### Export database mới nhất:
+```bash
+python3 export_database.py
+```
 
 ---
 
 **🎉 Hoàn thành! Chúc test tốt!**
 
-Ngày: 03/12/2025 | Port: 5001 | DB: QuanLyHocTap
+Ngày cập nhật: 11/12/2025 | Port: 5001 | DB: QuanLyHocTap (987KB)
 

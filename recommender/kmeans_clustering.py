@@ -113,12 +113,14 @@ def calculate_distance_to_clusters(student_id: str, model_path: str = 'models/km
         return {i: 999.0 for i in range(5)}
 
 
-def get_top_student_per_cluster(excel_path: str = 'data/student_data_100-2.xlsx') -> Dict[int, str]:
+def get_top_student_per_cluster(excel_path: str = 'data/student_data_100-2.xlsx', use_graduated_only: bool = True) -> Dict[int, str]:
     """
     Lấy sinh viên trội nhất (có GPA cao nhất) của mỗi cluster.
+    Chỉ lấy từ sinh viên tốt nghiệp nếu use_graduated_only=True.
     
     Args:
         excel_path: Đường dẫn đến file Excel
+        use_graduated_only: Nếu True, chỉ lấy từ sinh viên tốt nghiệp (đã học CT555 với điểm >= 5.0)
         
     Returns:
         Dict với key là cluster_id (0-4), value là StudentID của sinh viên trội nhất
@@ -141,6 +143,19 @@ def get_top_student_per_cluster(excel_path: str = 'data/student_data_100-2.xlsx'
         df = df.dropna(subset=['StudentID'])
         df['StudentID'] = df['StudentID'].astype(str).str.strip()
         
+        # Nếu chỉ dùng sinh viên tốt nghiệp, lọc dữ liệu
+        if use_graduated_only:
+            # Lấy danh sách sinh viên đã tốt nghiệp (có CT555 với điểm >= 5.0)
+            graduated_students = df[
+                (df['CourseCode'] == 'CT555') & 
+                (df['Score'] >= 5.0)
+            ]['StudentID'].unique()
+            
+            print(f"📊 Chỉ lấy top student từ {len(graduated_students)} sinh viên tốt nghiệp")
+            
+            # Chỉ giữ lại dữ liệu của sinh viên tốt nghiệp
+            df = df[df['StudentID'].isin(graduated_students)]
+        
         # Lấy danh sách tất cả môn học
         all_courses = get_all_courses()
         
@@ -148,7 +163,10 @@ def get_top_student_per_cluster(excel_path: str = 'data/student_data_100-2.xlsx'
         student_clusters = {}
         student_gpas = {}
         
-        for student_id in df['StudentID'].unique():
+        unique_students = df['StudentID'].unique()
+        print(f"👥 Xử lý {len(unique_students)} sinh viên để tìm top student")
+        
+        for student_id in unique_students:
             try:
                 # Lấy dữ liệu của sinh viên này
                 student_data = df[df['StudentID'] == student_id]
